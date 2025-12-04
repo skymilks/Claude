@@ -23,15 +23,33 @@ This application helps you:
 - **📈 Sort** contracts by date, value, or best match
 - **📋 View** key information like contract value, closing dates, and match percentage
 
-## 🚀 How to Run the Application
+## 🚀 Deployment Options
 
-### Option 1: Open Directly in Browser (Easiest)
+### **🌐 Production Deployment (Recommended)**
+
+**Deploy on your own custom domain with GitHub Pages:**
+
+1. **See [DEPLOYMENT.md](DEPLOYMENT.md) for complete guide**
+2. Set up takes 10-15 minutes
+3. Free HTTPS, no hosting costs
+4. Perfect for work computers (no installations)
+5. Example: `https://contracts.yourcompany.com`
+
+**Quick Start:**
+- Enable GitHub Pages on branch `claude/contracts-browser-app-01CuFboAQz6TVdzkuuo4TqSM`
+- Add your custom domain in GitHub settings
+- Configure DNS CNAME record
+- Done! Your site is live.
+
+### **🧪 Local Development**
+
+#### Option 1: Open Directly in Browser (Easiest)
 1. Navigate to the project folder on your computer
 2. Double-click on `index.html`
 3. The application will open in your default web browser
 4. Start browsing contracts!
 
-### Option 2: Using a Local Web Server (Recommended for Development)
+#### Option 2: Using a Local Web Server
 If you have Python installed:
 
 ```bash
