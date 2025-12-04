@@ -91,7 +91,7 @@ class ContractsBrowser {
         });
     }
 
-    completeOnboarding() {
+    async completeOnboarding() {
         const companyName = document.getElementById('companyName').value.trim();
         const website = document.getElementById('companyWebsite').value.trim();
         const description = document.getElementById('companyDescription').value.trim();
@@ -115,31 +115,179 @@ class ContractsBrowser {
             return;
         }
 
-        // Extract keywords from description and website URL
-        const descriptionKeywords = this.extractKeywords(description);
+        // Show loading state
+        this.showAnalyzingState();
 
-        // Extract potential keywords from website URL domain
-        const urlKeywords = this.extractKeywordsFromURL(website);
+        try {
+            // Crawl and analyze the website
+            const websiteData = await this.crawlWebsite(website);
 
-        // Combine all keywords
-        const allKeywords = [...new Set([...descriptionKeywords, ...urlKeywords])];
+            // Extract keywords from all sources
+            const websiteKeywords = this.extractKeywords(websiteData.text);
+            const descriptionKeywords = this.extractKeywords(description);
+            const urlKeywords = this.extractKeywordsFromURL(website);
 
-        const profileData = {
-            companyName,
-            website,
-            description,
-            keywords: allKeywords,
-            minValue: 0,
-            maxValue: Infinity,
-            showMatchedOnly: false
+            // Combine all keywords (prioritize website content)
+            const allKeywords = [...new Set([...websiteKeywords, ...descriptionKeywords, ...urlKeywords])];
+
+            // Store the full extracted content
+            const fullDescription = description || websiteData.text.substring(0, 500);
+
+            const profileData = {
+                companyName,
+                website,
+                description: fullDescription,
+                keywords: allKeywords,
+                websiteAnalysis: {
+                    title: websiteData.title,
+                    keywordsFound: websiteKeywords.length,
+                    analyzedAt: new Date().toISOString()
+                },
+                minValue: 0,
+                maxValue: Infinity,
+                showMatchedOnly: false
+            };
+
+            this.saveUserProfile(profileData);
+            this.hideOnboarding();
+
+            // Show success message with what was found
+            this.showAnalysisResults(allKeywords.length, websiteKeywords.length);
+
+            // Refresh display with matching
+            this.displayContracts();
+            this.updateStats();
+
+        } catch (error) {
+            console.error('Error analyzing website:', error);
+
+            // Fallback to basic keyword extraction
+            const descriptionKeywords = this.extractKeywords(description);
+            const urlKeywords = this.extractKeywordsFromURL(website);
+            const allKeywords = [...new Set([...descriptionKeywords, ...urlKeywords])];
+
+            const profileData = {
+                companyName,
+                website,
+                description,
+                keywords: allKeywords,
+                minValue: 0,
+                maxValue: Infinity,
+                showMatchedOnly: false
+            };
+
+            this.saveUserProfile(profileData);
+            this.hideOnboarding();
+
+            // Show message that we used manual input
+            if (description) {
+                alert(`Profile created! We extracted ${allKeywords.length} keywords from your input.`);
+            } else {
+                alert(`Profile created! Please edit your profile to add more details for better matching.`);
+            }
+
+            // Refresh display with matching
+            this.displayContracts();
+            this.updateStats();
+        }
+    }
+
+    showAnalyzingState() {
+        // Add loading overlay to onboarding
+        const modal = document.querySelector('.onboarding-steps');
+        const loadingHTML = `
+            <div class="analyzing-overlay">
+                <div class="analyzing-content">
+                    <div class="spinner"></div>
+                    <h3>Analyzing your website...</h3>
+                    <p>We're crawling your website to understand your business</p>
+                </div>
+            </div>
+        `;
+        modal.insertAdjacentHTML('beforeend', loadingHTML);
+    }
+
+    hideAnalyzingState() {
+        const overlay = document.querySelector('.analyzing-overlay');
+        if (overlay) {
+            overlay.remove();
+        }
+    }
+
+    showAnalysisResults(totalKeywords, websiteKeywords) {
+        this.hideAnalyzingState();
+        alert(`✅ Website analyzed successfully!\n\nFound ${websiteKeywords} keywords from your website\nTotal ${totalKeywords} keywords extracted\n\nWe'll now show you the best matching contracts!`);
+    }
+
+    async crawlWebsite(url) {
+        // Try multiple methods to fetch the website
+
+        // Method 1: Direct fetch (will work for CORS-enabled sites)
+        try {
+            const response = await fetch(url);
+            if (response.ok) {
+                const html = await response.text();
+                return this.parseHTML(html);
+            }
+        } catch (e) {
+            console.log('Direct fetch failed, trying CORS proxy...');
+        }
+
+        // Method 2: Use CORS proxy
+        const corsProxies = [
+            `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+            `https://corsproxy.io/?${encodeURIComponent(url)}`
+        ];
+
+        for (const proxyUrl of corsProxies) {
+            try {
+                const response = await fetch(proxyUrl);
+                if (response.ok) {
+                    const html = await response.text();
+                    return this.parseHTML(html);
+                }
+            } catch (e) {
+                console.log(`Proxy ${proxyUrl} failed, trying next...`);
+            }
+        }
+
+        // If all methods fail, throw error
+        throw new Error('Unable to fetch website content');
+    }
+
+    parseHTML(html) {
+        // Create a temporary DOM parser
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        // Remove script and style elements
+        const scripts = doc.querySelectorAll('script, style, noscript');
+        scripts.forEach(el => el.remove());
+
+        // Get title
+        const title = doc.querySelector('title')?.textContent || '';
+
+        // Get meta description
+        const metaDesc = doc.querySelector('meta[name="description"]')?.getAttribute('content') || '';
+
+        // Get text from important sections
+        const mainContent = doc.querySelector('main') || doc.querySelector('body');
+        let text = mainContent ? mainContent.textContent : doc.body.textContent;
+
+        // Clean up the text
+        text = text
+            .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+            .replace(/\n+/g, ' ') // Replace newlines with spaces
+            .trim();
+
+        // Combine title, meta description, and main text
+        const fullText = `${title} ${metaDesc} ${text}`.substring(0, 5000); // Limit to first 5000 chars
+
+        return {
+            title,
+            metaDescription: metaDesc,
+            text: fullText
         };
-
-        this.saveUserProfile(profileData);
-        this.hideOnboarding();
-
-        // Refresh display with matching
-        this.displayContracts();
-        this.updateStats();
     }
 
     extractKeywordsFromURL(url) {

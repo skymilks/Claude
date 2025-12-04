@@ -2,14 +2,26 @@
 
 A simple, user-friendly web application for browsing and searching Canadian government contracts. Built with HTML, CSS, and JavaScript - perfect for beginners!
 
+## ✨ Smart Contract Matching with Website Analysis
+
+**🤖 Powered by Intelligent Website Crawling**
+
+This application automatically analyzes your company website to find the perfect government contracts for you! Simply enter your company URL, and our system will:
+- 🕷️ **Crawl your website** to understand your business
+- 🔍 **Extract keywords** from your services, products, and descriptions
+- 🎯 **Match contracts** that align with your expertise
+- ⭐ **Score each contract** from 0-100% relevance
+
 ## 📋 What Does This Application Do?
 
 This application helps you:
-- **Browse** government contracts in an easy-to-read format
-- **Search** contracts by title, description, department, or contract number
-- **Filter** contracts by department and status (active/closed)
-- **Sort** contracts by date or value
-- **View** key information like contract value, closing dates, and departments
+- **🌐 Analyze your business** - Automatically crawls your website to understand what you do
+- **🎯 Smart matching** - Intelligently matches you with relevant government contracts
+- **📊 Browse** government contracts in an easy-to-read format with match scores
+- **🔍 Search** contracts by title, description, department, or contract number
+- **🎨 Filter** contracts by department and status (active/closed)
+- **📈 Sort** contracts by date, value, or best match
+- **📋 View** key information like contract value, closing dates, and match percentage
 
 ## 🚀 How to Run the Application
 

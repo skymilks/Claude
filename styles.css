@@ -472,6 +472,7 @@ footer a:hover {
 
 .onboarding-steps {
     padding: 40px;
+    position: relative;
 }
 
 .onboarding-step {
@@ -604,4 +605,41 @@ footer a:hover {
 
 .match-score::before {
     content: '⭐';
+}
+
+/* Analyzing Overlay */
+.analyzing-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.95);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    border-radius: 16px;
+}
+
+.analyzing-content {
+    text-align: center;
+    padding: 40px;
+}
+
+.analyzing-content .spinner {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 20px;
+}
+
+.analyzing-content h3 {
+    color: #2c3e50;
+    font-size: 1.5em;
+    margin-bottom: 10px;
+}
+
+.analyzing-content p {
+    color: #6c757d;
+    font-size: 1.1em;
 }
