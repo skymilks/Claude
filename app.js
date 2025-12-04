@@ -69,7 +69,6 @@ class ContractsBrowser {
             document.getElementById('companyName').value = this.userProfile.companyName || '';
             document.getElementById('companyWebsite').value = this.userProfile.website || '';
             document.getElementById('companyDescription').value = this.userProfile.description || '';
-            document.getElementById('industryKeywords').value = this.userProfile.keywords ? this.userProfile.keywords.join(', ') : '';
             document.getElementById('minContractValue').value = this.userProfile.minValue || '';
             document.getElementById('maxContractValue').value = this.userProfile.maxValue || '';
             document.getElementById('showMatchedOnly').checked = this.userProfile.showMatchedOnly || false;
@@ -85,23 +84,30 @@ class ContractsBrowser {
         // Step navigation
         document.getElementById('nextStep1').addEventListener('click', () => {
             const companyName = document.getElementById('companyName').value.trim();
+            const website = document.getElementById('companyWebsite').value.trim();
+
             if (!companyName) {
                 alert('Please enter your company name');
                 return;
             }
-            this.goToStep(2);
-        });
+            if (!website) {
+                alert('Please enter your company website URL');
+                return;
+            }
 
-        document.getElementById('nextStep2').addEventListener('click', () => {
-            this.goToStep(3);
+            // Validate URL format
+            try {
+                new URL(website);
+            } catch (e) {
+                alert('Please enter a valid website URL (e.g., https://yourcompany.com)');
+                return;
+            }
+
+            this.goToStep(2);
         });
 
         document.getElementById('backStep2').addEventListener('click', () => {
             this.goToStep(1);
-        });
-
-        document.getElementById('backStep3').addEventListener('click', () => {
-            this.goToStep(2);
         });
 
         document.getElementById('skipOnboarding').addEventListener('click', () => {
@@ -128,19 +134,24 @@ class ContractsBrowser {
         const companyName = document.getElementById('companyName').value.trim();
         const website = document.getElementById('companyWebsite').value.trim();
         const description = document.getElementById('companyDescription').value.trim();
-        const keywordsInput = document.getElementById('industryKeywords').value.trim();
         const minValue = document.getElementById('minContractValue').value;
         const maxValue = document.getElementById('maxContractValue').value;
         const showMatchedOnly = document.getElementById('showMatchedOnly').checked;
 
-        // Parse keywords
-        const keywords = keywordsInput ? keywordsInput.split(',').map(k => k.trim().toLowerCase()) : [];
+        // Validate required fields
+        if (!companyName || !website) {
+            alert('Please complete all required fields (Company Name and Website URL)');
+            return;
+        }
 
-        // Extract keywords from description
+        // Extract keywords from description and website URL
         const descriptionKeywords = this.extractKeywords(description);
 
+        // Extract potential keywords from website URL domain
+        const urlKeywords = this.extractKeywordsFromURL(website);
+
         // Combine all keywords
-        const allKeywords = [...new Set([...keywords, ...descriptionKeywords])];
+        const allKeywords = [...new Set([...descriptionKeywords, ...urlKeywords])];
 
         const profileData = {
             companyName,
@@ -158,6 +169,30 @@ class ContractsBrowser {
         // Refresh display with matching
         this.displayContracts();
         this.updateStats();
+    }
+
+    extractKeywordsFromURL(url) {
+        try {
+            const urlObj = new URL(url);
+            // Extract domain name parts
+            const domain = urlObj.hostname.replace('www.', '');
+            const parts = domain.split('.');
+
+            // Get main domain name (excluding TLD)
+            const domainName = parts[0];
+
+            // Split camelCase or hyphenated words
+            const words = domainName
+                .replace(/([a-z])([A-Z])/g, '$1 $2')
+                .replace(/[-_]/g, ' ')
+                .toLowerCase()
+                .split(/\s+/)
+                .filter(word => word.length > 3);
+
+            return words;
+        } catch (e) {
+            return [];
+        }
     }
 
     extractKeywords(text) {

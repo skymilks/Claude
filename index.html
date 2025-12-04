@@ -20,14 +20,22 @@
                 <div class="onboarding-step active" id="step1">
                     <h3>Step 1: Tell us about your company</h3>
                     <div class="form-group">
-                        <label for="companyName">Company Name</label>
-                        <input type="text" id="companyName" placeholder="e.g., Tech Solutions Inc.">
+                        <label for="companyName">Company Name *</label>
+                        <input type="text" id="companyName" placeholder="e.g., Tech Solutions Inc." required>
                     </div>
 
                     <div class="form-group">
-                        <label for="companyWebsite">Company Website (Optional)</label>
-                        <input type="url" id="companyWebsite" placeholder="https://yourcompany.com">
-                        <small>We'll analyze your website to understand your services</small>
+                        <label for="companyWebsite">Company Website URL *</label>
+                        <input type="url" id="companyWebsite" placeholder="https://yourcompany.com" required>
+                        <small>Required - We'll use this to understand your business</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="companyDescription">Paste content from your website or business documents</label>
+                        <textarea id="companyDescription" rows="6" placeholder="Paste text from your website's About page, Services page, or any business documents that describe what you do...
+
+Example: We provide IT infrastructure consulting, cloud migration services, cybersecurity solutions, and software development for government and enterprise clients. Our team specializes in cloud architecture, network security, and digital transformation."></textarea>
+                        <small>This helps us better match contracts to your services</small>
                     </div>
 
                     <div class="step-buttons">
@@ -36,33 +44,9 @@
                     </div>
                 </div>
 
-                <!-- Step 2: Services & Description -->
+                <!-- Step 2: Preferences -->
                 <div class="onboarding-step" id="step2">
-                    <h3>Step 2: Describe your business</h3>
-
-                    <div class="form-group">
-                        <label for="companyDescription">What does your company do?</label>
-                        <textarea id="companyDescription" rows="4" placeholder="Describe your products, services, and expertise...
-
-Example: We provide IT infrastructure consulting, cloud migration services, cybersecurity solutions, and software development for government and enterprise clients."></textarea>
-                        <small>You can paste text from your company documents or website</small>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="industryKeywords">Key Services/Keywords (comma separated)</label>
-                        <input type="text" id="industryKeywords" placeholder="e.g., IT infrastructure, cloud computing, cybersecurity, software development">
-                        <small>Help us match you with relevant contracts</small>
-                    </div>
-
-                    <div class="step-buttons">
-                        <button class="btn-secondary" id="backStep2">← Back</button>
-                        <button class="btn-primary" id="nextStep2">Next →</button>
-                    </div>
-                </div>
-
-                <!-- Step 3: Preferences -->
-                <div class="onboarding-step" id="step3">
-                    <h3>Step 3: Set your preferences</h3>
+                    <h3>Step 2: Set your preferences</h3>
 
                     <div class="form-group">
                         <label for="minContractValue">Minimum Contract Value (CAD)</label>
@@ -82,7 +66,7 @@ Example: We provide IT infrastructure consulting, cloud migration services, cybe
                     </div>
 
                     <div class="step-buttons">
-                        <button class="btn-secondary" id="backStep3">← Back</button>
+                        <button class="btn-secondary" id="backStep2">← Back</button>
                         <button class="btn-primary" id="completeOnboarding">Complete Setup ✓</button>
                     </div>
                 </div>
