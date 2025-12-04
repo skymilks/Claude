@@ -69,9 +69,6 @@ class ContractsBrowser {
             document.getElementById('companyName').value = this.userProfile.companyName || '';
             document.getElementById('companyWebsite').value = this.userProfile.website || '';
             document.getElementById('companyDescription').value = this.userProfile.description || '';
-            document.getElementById('minContractValue').value = this.userProfile.minValue || '';
-            document.getElementById('maxContractValue').value = this.userProfile.maxValue || '';
-            document.getElementById('showMatchedOnly').checked = this.userProfile.showMatchedOnly || false;
         }
     }
 
@@ -81,35 +78,6 @@ class ContractsBrowser {
     }
 
     setupOnboardingListeners() {
-        // Step navigation
-        document.getElementById('nextStep1').addEventListener('click', () => {
-            const companyName = document.getElementById('companyName').value.trim();
-            const website = document.getElementById('companyWebsite').value.trim();
-
-            if (!companyName) {
-                alert('Please enter your company name');
-                return;
-            }
-            if (!website) {
-                alert('Please enter your company website URL');
-                return;
-            }
-
-            // Validate URL format
-            try {
-                new URL(website);
-            } catch (e) {
-                alert('Please enter a valid website URL (e.g., https://yourcompany.com)');
-                return;
-            }
-
-            this.goToStep(2);
-        });
-
-        document.getElementById('backStep2').addEventListener('click', () => {
-            this.goToStep(1);
-        });
-
         document.getElementById('skipOnboarding').addEventListener('click', () => {
             this.hideOnboarding();
         });
@@ -123,24 +91,27 @@ class ContractsBrowser {
         });
     }
 
-    goToStep(stepNumber) {
-        document.querySelectorAll('.onboarding-step').forEach(step => {
-            step.classList.remove('active');
-        });
-        document.getElementById(`step${stepNumber}`).classList.add('active');
-    }
-
     completeOnboarding() {
         const companyName = document.getElementById('companyName').value.trim();
         const website = document.getElementById('companyWebsite').value.trim();
         const description = document.getElementById('companyDescription').value.trim();
-        const minValue = document.getElementById('minContractValue').value;
-        const maxValue = document.getElementById('maxContractValue').value;
-        const showMatchedOnly = document.getElementById('showMatchedOnly').checked;
 
         // Validate required fields
-        if (!companyName || !website) {
-            alert('Please complete all required fields (Company Name and Website URL)');
+        if (!companyName) {
+            alert('Please enter your company name');
+            return;
+        }
+
+        if (!website) {
+            alert('Please enter your company website URL');
+            return;
+        }
+
+        // Validate URL format
+        try {
+            new URL(website);
+        } catch (e) {
+            alert('Please enter a valid website URL (e.g., https://yourcompany.com)');
             return;
         }
 
@@ -158,9 +129,9 @@ class ContractsBrowser {
             website,
             description,
             keywords: allKeywords,
-            minValue: minValue ? parseInt(minValue) : 0,
-            maxValue: maxValue ? parseInt(maxValue) : Infinity,
-            showMatchedOnly
+            minValue: 0,
+            maxValue: Infinity,
+            showMatchedOnly: false
         };
 
         this.saveUserProfile(profileData);
