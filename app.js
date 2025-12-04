@@ -8,16 +8,221 @@ class ContractsBrowser {
         this.currentPage = 1;
         this.contractsPerPage = 10;
         this.departments = new Set();
+        this.userProfile = null;
 
         this.init();
     }
 
     init() {
         this.loadSampleData();
+        this.loadUserProfile();
         this.setupEventListeners();
+        this.setupOnboardingListeners();
         this.populateDepartments();
+        this.checkFirstVisit();
         this.displayContracts();
         this.updateStats();
+    }
+
+    // User Profile Management
+    loadUserProfile() {
+        const savedProfile = localStorage.getItem('userProfile');
+        if (savedProfile) {
+            this.userProfile = JSON.parse(savedProfile);
+            this.displayUserProfile();
+        }
+    }
+
+    saveUserProfile(profileData) {
+        this.userProfile = profileData;
+        localStorage.setItem('userProfile', JSON.stringify(profileData));
+        this.displayUserProfile();
+    }
+
+    displayUserProfile() {
+        if (this.userProfile && this.userProfile.companyName) {
+            document.getElementById('userProfile').style.display = 'block';
+            document.getElementById('companyNameDisplay').textContent = this.userProfile.companyName;
+            document.getElementById('matchedStat').style.display = 'block';
+
+            // Show match sort option
+            const matchSortOption = document.getElementById('matchSortOption');
+            if (matchSortOption) {
+                matchSortOption.style.display = 'block';
+            }
+        }
+    }
+
+    // Onboarding
+    checkFirstVisit() {
+        if (!this.userProfile) {
+            setTimeout(() => this.showOnboarding(), 500);
+        }
+    }
+
+    showOnboarding() {
+        const modal = document.getElementById('onboardingModal');
+        modal.classList.add('active');
+
+        // If editing profile, populate fields
+        if (this.userProfile) {
+            document.getElementById('companyName').value = this.userProfile.companyName || '';
+            document.getElementById('companyWebsite').value = this.userProfile.website || '';
+            document.getElementById('companyDescription').value = this.userProfile.description || '';
+            document.getElementById('industryKeywords').value = this.userProfile.keywords ? this.userProfile.keywords.join(', ') : '';
+            document.getElementById('minContractValue').value = this.userProfile.minValue || '';
+            document.getElementById('maxContractValue').value = this.userProfile.maxValue || '';
+            document.getElementById('showMatchedOnly').checked = this.userProfile.showMatchedOnly || false;
+        }
+    }
+
+    hideOnboarding() {
+        const modal = document.getElementById('onboardingModal');
+        modal.classList.remove('active');
+    }
+
+    setupOnboardingListeners() {
+        // Step navigation
+        document.getElementById('nextStep1').addEventListener('click', () => {
+            const companyName = document.getElementById('companyName').value.trim();
+            if (!companyName) {
+                alert('Please enter your company name');
+                return;
+            }
+            this.goToStep(2);
+        });
+
+        document.getElementById('nextStep2').addEventListener('click', () => {
+            this.goToStep(3);
+        });
+
+        document.getElementById('backStep2').addEventListener('click', () => {
+            this.goToStep(1);
+        });
+
+        document.getElementById('backStep3').addEventListener('click', () => {
+            this.goToStep(2);
+        });
+
+        document.getElementById('skipOnboarding').addEventListener('click', () => {
+            this.hideOnboarding();
+        });
+
+        document.getElementById('completeOnboarding').addEventListener('click', () => {
+            this.completeOnboarding();
+        });
+
+        document.getElementById('editProfile').addEventListener('click', () => {
+            this.showOnboarding();
+        });
+    }
+
+    goToStep(stepNumber) {
+        document.querySelectorAll('.onboarding-step').forEach(step => {
+            step.classList.remove('active');
+        });
+        document.getElementById(`step${stepNumber}`).classList.add('active');
+    }
+
+    completeOnboarding() {
+        const companyName = document.getElementById('companyName').value.trim();
+        const website = document.getElementById('companyWebsite').value.trim();
+        const description = document.getElementById('companyDescription').value.trim();
+        const keywordsInput = document.getElementById('industryKeywords').value.trim();
+        const minValue = document.getElementById('minContractValue').value;
+        const maxValue = document.getElementById('maxContractValue').value;
+        const showMatchedOnly = document.getElementById('showMatchedOnly').checked;
+
+        // Parse keywords
+        const keywords = keywordsInput ? keywordsInput.split(',').map(k => k.trim().toLowerCase()) : [];
+
+        // Extract keywords from description
+        const descriptionKeywords = this.extractKeywords(description);
+
+        // Combine all keywords
+        const allKeywords = [...new Set([...keywords, ...descriptionKeywords])];
+
+        const profileData = {
+            companyName,
+            website,
+            description,
+            keywords: allKeywords,
+            minValue: minValue ? parseInt(minValue) : 0,
+            maxValue: maxValue ? parseInt(maxValue) : Infinity,
+            showMatchedOnly
+        };
+
+        this.saveUserProfile(profileData);
+        this.hideOnboarding();
+
+        // Refresh display with matching
+        this.displayContracts();
+        this.updateStats();
+    }
+
+    extractKeywords(text) {
+        if (!text) return [];
+
+        // Common words to ignore
+        const stopWords = new Set(['a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'he', 'in', 'is', 'it', 'its', 'of', 'on', 'that', 'the', 'to', 'was', 'will', 'with', 'we', 'our', 'your', 'their']);
+
+        // Extract words
+        const words = text.toLowerCase()
+            .replace(/[^\w\s]/g, ' ')
+            .split(/\s+/)
+            .filter(word => word.length > 3 && !stopWords.has(word));
+
+        // Get unique words
+        return [...new Set(words)];
+    }
+
+    // Intelligent Matching Algorithm
+    calculateMatchScore(contract) {
+        if (!this.userProfile || !this.userProfile.keywords || this.userProfile.keywords.length === 0) {
+            return { score: 0, matchedKeywords: [] };
+        }
+
+        const contractText = `${contract.title} ${contract.description} ${contract.department}`.toLowerCase();
+        const matchedKeywords = [];
+        let score = 0;
+
+        // Check each user keyword against contract
+        this.userProfile.keywords.forEach(keyword => {
+            if (contractText.includes(keyword)) {
+                matchedKeywords.push(keyword);
+                // Weight keywords found in title higher
+                if (contract.title.toLowerCase().includes(keyword)) {
+                    score += 3;
+                } else if (contract.description.toLowerCase().includes(keyword)) {
+                    score += 2;
+                } else {
+                    score += 1;
+                }
+            }
+        });
+
+        // Check contract value preferences
+        if (this.userProfile.minValue && contract.value < this.userProfile.minValue) {
+            score *= 0.5; // Reduce score if below minimum
+        }
+        if (this.userProfile.maxValue && contract.value > this.userProfile.maxValue) {
+            score *= 0.7; // Reduce score if above maximum
+        }
+
+        // Normalize score to 0-100
+        const normalizedScore = Math.min(100, (score / this.userProfile.keywords.length) * 20);
+
+        return {
+            score: Math.round(normalizedScore),
+            matchedKeywords
+        };
+    }
+
+    getMatchLevel(score) {
+        if (score >= 70) return { level: 'high', label: 'Excellent Match' };
+        if (score >= 40) return { level: 'medium', label: 'Good Match' };
+        if (score > 0) return { level: 'low', label: 'Potential Match' };
+        return { level: 'none', label: 'No Match' };
     }
 
     setupEventListeners() {
@@ -265,7 +470,14 @@ class ContractsBrowser {
             const matchesDepartment = departmentFilter === '' || contract.department === departmentFilter;
             const matchesStatus = statusFilter === '' || contract.status === statusFilter;
 
-            return matchesSearch && matchesDepartment && matchesStatus;
+            // If user wants only matched contracts
+            let matchesProfile = true;
+            if (this.userProfile && this.userProfile.showMatchedOnly) {
+                const matchResult = this.calculateMatchScore(contract);
+                matchesProfile = matchResult.score > 0;
+            }
+
+            return matchesSearch && matchesDepartment && matchesStatus && matchesProfile;
         });
 
         this.handleSort();
@@ -273,6 +485,13 @@ class ContractsBrowser {
 
     handleSort() {
         const sortBy = document.getElementById('sortFilter').value;
+
+        // Add match scores to contracts if user profile exists
+        if (this.userProfile && this.userProfile.keywords && this.userProfile.keywords.length > 0) {
+            this.filteredContracts.forEach(contract => {
+                contract.matchData = this.calculateMatchScore(contract);
+            });
+        }
 
         switch(sortBy) {
             case 'date-desc':
@@ -286,6 +505,9 @@ class ContractsBrowser {
                 break;
             case 'value-asc':
                 this.filteredContracts.sort((a, b) => a.value - b.value);
+                break;
+            case 'match-desc':
+                this.filteredContracts.sort((a, b) => (b.matchData?.score || 0) - (a.matchData?.score || 0));
                 break;
         }
 
@@ -329,10 +551,20 @@ class ContractsBrowser {
         const formattedPublishDate = this.formatDate(contract.publishDate);
         const formattedCloseDate = this.formatDate(contract.closeDate);
 
+        // Generate match score badge if user has profile
+        let matchBadge = '';
+        if (this.userProfile && contract.matchData && contract.matchData.score > 0) {
+            const matchLevel = this.getMatchLevel(contract.matchData.score);
+            matchBadge = `<span class="match-score match-${matchLevel.level}">${contract.matchData.score}% ${matchLevel.label}</span>`;
+        }
+
         card.innerHTML = `
             <div class="contract-header">
                 <div class="contract-title">${contract.title}</div>
-                <span class="contract-status ${statusClass}">${contract.status.toUpperCase()}</span>
+                <div>
+                    <span class="contract-status ${statusClass}">${contract.status.toUpperCase()}</span>
+                    ${matchBadge}
+                </div>
             </div>
             <div class="contract-meta">
                 <div class="meta-item">
@@ -429,6 +661,15 @@ class ContractsBrowser {
         document.getElementById('totalContracts').textContent = totalContracts;
         document.getElementById('activeContracts').textContent = activeContracts;
         document.getElementById('totalValue').textContent = this.formatCurrency(totalValue);
+
+        // Update matched contracts count if user has profile
+        if (this.userProfile) {
+            const matchedContracts = this.filteredContracts.filter(c => {
+                const matchData = this.calculateMatchScore(c);
+                return matchData.score > 0;
+            }).length;
+            document.getElementById('matchedContracts').textContent = matchedContracts;
+        }
     }
 
     formatCurrency(value) {
