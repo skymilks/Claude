@@ -1,0 +1,23 @@
+{
+  "name": "canadian-contracts-browser",
+  "version": "1.0.0",
+  "description": "A user-friendly web application for browsing Canadian government contracts",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "serve": "http-server -p 8000"
+  },
+  "keywords": [
+    "canada",
+    "government",
+    "contracts",
+    "procurement",
+    "browser",
+    "web-app"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}

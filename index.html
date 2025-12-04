@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canadian Government Contracts Browser</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🍁 Canadian Government Contracts Browser</h1>
+            <p class="subtitle">Search and explore government procurement opportunities</p>
+        </header>
+
+        <div class="search-section">
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="Search contracts by title, description, or department...">
+                <button id="searchBtn">Search</button>
+            </div>
+
+            <div class="filters">
+                <div class="filter-group">
+                    <label for="departmentFilter">Department:</label>
+                    <select id="departmentFilter">
+                        <option value="">All Departments</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="statusFilter">Status:</label>
+                    <select id="statusFilter">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="closed">Closed</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="sortFilter">Sort by:</label>
+                    <select id="sortFilter">
+                        <option value="date-desc">Newest First</option>
+                        <option value="date-asc">Oldest First</option>
+                        <option value="value-desc">Value (High to Low)</option>
+                        <option value="value-asc">Value (Low to High)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="totalContracts">0</div>
+                <div class="stat-label">Total Contracts</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="activeContracts">0</div>
+                <div class="stat-label">Active Opportunities</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalValue">$0</div>
+                <div class="stat-label">Total Value</div>
+            </div>
+        </div>
+
+        <div id="loading" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Loading contracts...</p>
+        </div>
+
+        <div id="contractsList" class="contracts-list">
+            <!-- Contracts will be dynamically inserted here -->
+        </div>
+
+        <div id="pagination" class="pagination">
+            <!-- Pagination will be dynamically inserted here -->
+        </div>
+
+        <footer>
+            <p>Data sourced from the Government of Canada Open Data Portal</p>
+            <p><a href="https://open.canada.ca" target="_blank">open.canada.ca</a></p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
