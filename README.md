@@ -23,6 +23,26 @@ This application helps you:
 - **📈 Sort** contracts by date, value, or best match
 - **📋 View** key information like contract value, closing dates, and match percentage
 
+## 🎨 Customization & Branding
+
+**Make it yours! Add your logo and brand colors:**
+
+📘 **See [BRANDING.md](BRANDING.md) for complete customization guide**
+
+- Add your company logo (PNG, SVG, JPG)
+- Change colors to match your brand
+- Customize text and titles
+- Pre-made color themes included
+- Easy CSS variables system
+
+**Quick Customization:**
+1. Add `logo.png` to root directory
+2. Edit CSS variables in `styles.css`
+3. Update title in `index.html`
+4. Done! Fully branded application.
+
+---
+
 ## 🚀 Deployment Options
 
 ### **🌐 Production Deployment (Recommended)**
