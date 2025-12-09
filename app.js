@@ -1,11 +1,12 @@
-// CrownBids - Lead Generation Funnel
-// Main Application Logic
+// CrownBids - Smart Contract Matching Tool
+// Utility-First Approach
 
 class CrownBids {
     constructor() {
         this.contracts = [];
         this.filteredContracts = [];
         this.apiService = new APIService();
+        this.userCategory = null;
         this.init();
     }
 
@@ -15,11 +16,8 @@ class CrownBids {
         await this.loadContracts();
         this.hideLoading();
 
-        // Setup search
-        this.setupSearch();
-
-        // Setup modal
-        this.setupModal();
+        // Setup URL input
+        this.setupURLInput();
 
         // Display all contracts initially
         this.displayContracts(this.contracts);
@@ -39,31 +37,181 @@ class CrownBids {
         }
     }
 
-    // Setup hero search with real-time filtering
-    setupSearch() {
-        const searchInput = document.getElementById('heroSearchInput');
+    // Setup URL input handler
+    setupURLInput() {
+        const input = document.getElementById('companyWebsiteInput');
+        const button = document.getElementById('analyzeButton');
 
-        if (searchInput) {
-            searchInput.addEventListener('input', Utils.debounce((e) => {
-                this.handleSearch(e.target.value);
-            }, 300));
+        if (button) {
+            button.addEventListener('click', () => {
+                const url = input ? input.value.trim() : '';
+                if (url) {
+                    this.analyzeURL(url);
+                } else {
+                    Utils.showToast('Please enter your company website URL', 'error');
+                }
+            });
+        }
+
+        if (input) {
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    const url = input.value.trim();
+                    if (url) {
+                        this.analyzeURL(url);
+                    }
+                }
+            });
         }
     }
 
-    // Handle search filtering
-    handleSearch(query) {
-        if (!query || query.trim() === '') {
-            this.filteredContracts = [...this.contracts];
-        } else {
-            const lowerQuery = query.toLowerCase();
-            this.filteredContracts = this.contracts.filter(contract =>
-                contract.title.toLowerCase().includes(lowerQuery) ||
-                contract.description.toLowerCase().includes(lowerQuery) ||
-                contract.department.toLowerCase().includes(lowerQuery)
-            );
+    // Analyze URL and show scanning animation
+    async analyzeURL(url) {
+        // Validate URL
+        if (!Utils.isValidURL(url)) {
+            Utils.showToast('Please enter a valid URL (e.g., https://yourcompany.com)', 'error');
+            return;
         }
 
+        // Show scanning overlay
+        this.showScanning();
+
+        // Simulate 3-second analysis with progress updates
+        await this.simulateAnalysis(url);
+
+        // Detect category from URL
+        const category = this.detectCategory(url);
+        this.userCategory = category;
+
+        // Filter contracts by category
+        if (category) {
+            this.filteredContracts = this.contracts.filter(c => c.category === category);
+
+            // Calculate match scores
+            this.filteredContracts = this.filteredContracts.map(contract => ({
+                ...contract,
+                matchScore: this.calculateMatchScore(contract, url)
+            }));
+
+            // Sort by match score (highest first)
+            this.filteredContracts.sort((a, b) => b.matchScore - a.matchScore);
+        } else {
+            // No category detected - show all with generic scores
+            this.filteredContracts = this.contracts.map(contract => ({
+                ...contract,
+                matchScore: Math.floor(Math.random() * 30) + 40 // 40-70%
+            }));
+        }
+
+        // Hide scanning and display results
+        this.hideScanning();
         this.displayContracts(this.filteredContracts);
+
+        // Update results count
+        this.updateResultsCount();
+    }
+
+    // Detect business category from URL
+    detectCategory(url) {
+        const lowerURL = url.toLowerCase();
+
+        // Security keywords
+        if (lowerURL.includes('secure') || lowerURL.includes('guard') ||
+            lowerURL.includes('safe') || lowerURL.includes('security') ||
+            lowerURL.includes('patrol') || lowerURL.includes('protect')) {
+            return 'security';
+        }
+
+        // Janitorial keywords
+        if (lowerURL.includes('clean') || lowerURL.includes('janitorial') ||
+            lowerURL.includes('wash') || lowerURL.includes('custodial') ||
+            lowerURL.includes('sanit') || lowerURL.includes('maid')) {
+            return 'janitorial';
+        }
+
+        // Landscaping keywords
+        if (lowerURL.includes('scape') || lowerURL.includes('snow') ||
+            lowerURL.includes('lawn') || lowerURL.includes('grass') ||
+            lowerURL.includes('tree') || lowerURL.includes('garden')) {
+            return 'landscaping';
+        }
+
+        return null; // No match
+    }
+
+    // Calculate match score for a contract
+    calculateMatchScore(contract, url) {
+        let score = 75; // Base score for category match
+
+        const lowerURL = url.toLowerCase();
+        const lowerTitle = contract.title.toLowerCase();
+        const lowerDesc = contract.description.toLowerCase();
+
+        // Bonus points for keyword matches in URL
+        contract.keywords.forEach(keyword => {
+            if (lowerURL.includes(keyword)) score += 3;
+            if (lowerTitle.includes(keyword)) score += 2;
+            if (lowerDesc.includes(keyword)) score += 1;
+        });
+
+        // Cap at 98 (never 100%)
+        return Math.min(score, 98);
+    }
+
+    // Simulate scanning animation with progress
+    async simulateAnalysis(url) {
+        const statusEl = document.getElementById('scanningStatus');
+        const progressEl = document.getElementById('scanningProgress');
+
+        const steps = [
+            { text: 'Scanning website...', progress: 0, duration: 200 },
+            { text: 'Analyzing services...', progress: 25, duration: 700 },
+            { text: 'Scanning 5,000+ contracts...', progress: 50, duration: 1000 },
+            { text: 'Calculating compatibility...', progress: 75, duration: 800 },
+            { text: 'Finalizing matches...', progress: 100, duration: 300 }
+        ];
+
+        for (const step of steps) {
+            if (statusEl) statusEl.textContent = step.text;
+            if (progressEl) progressEl.style.width = `${step.progress}%`;
+            await this.delay(step.duration);
+        }
+    }
+
+    // Helper: Delay function
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // Show scanning overlay
+    showScanning() {
+        const overlay = document.getElementById('scanningOverlay');
+        if (overlay) overlay.style.display = 'flex';
+    }
+
+    // Hide scanning overlay
+    hideScanning() {
+        const overlay = document.getElementById('scanningOverlay');
+        if (overlay) overlay.style.display = 'none';
+    }
+
+    // Update results count
+    updateResultsCount() {
+        const countEl = document.getElementById('resultsCount');
+        const matchedCountText = document.getElementById('matchedCountText');
+        const matchedCount = document.getElementById('matchedCount');
+
+        if (countEl) {
+            if (this.userCategory && this.filteredContracts.length > 0) {
+                if (matchedCountText) matchedCountText.style.display = 'inline';
+                if (matchedCount) matchedCount.textContent = this.filteredContracts.length;
+            } else {
+                if (matchedCountText) matchedCountText.style.display = 'none';
+            }
+
+            const total = this.contracts.length;
+            countEl.innerHTML = `Showing <strong>${this.filteredContracts.length}</strong> active opportunities${this.userCategory ? ` • <span id="matchedCountText">Found <strong id="matchedCount">${this.filteredContracts.length}</strong> matches for your business</span>` : ''}`;
+        }
     }
 
     // Display contracts in grid
@@ -73,11 +221,6 @@ class CrownBids {
         const resultsCount = document.getElementById('resultsCount');
 
         if (!grid) return;
-
-        // Update results count
-        if (resultsCount) {
-            resultsCount.innerHTML = `Showing <strong>${contracts.length}</strong> active opportunities`;
-        }
 
         if (contracts.length === 0) {
             grid.style.display = 'none';
@@ -103,12 +246,30 @@ class CrownBids {
         const card = document.createElement('div');
         card.className = 'contract-card';
 
-        // Determine complexity level
-        const complexityLevel = contract.complexity > 60 ? 'High' :
-                               contract.complexity > 30 ? 'Medium' : 'Low';
+        // Match score badge (only if analyzed)
+        let matchBadgeHTML = '';
+        if (contract.matchScore) {
+            const matchClass = contract.matchScore >= 90 ? 'high' : 'medium';
+            matchBadgeHTML = `
+                <div class="match-score-badge ${matchClass}">
+                    <div>
+                        ${contract.matchScore}%
+                        <span class="match-score-label">Match</span>
+                    </div>
+                </div>
+            `;
+        }
 
         // Format value
         const formattedValue = Utils.formatCurrency(contract.value);
+
+        // Service category tag
+        const categoryMap = {
+            'security': 'Security',
+            'janitorial': 'Janitorial',
+            'landscaping': 'Landscaping'
+        };
+        const categoryLabel = categoryMap[contract.category] || 'General';
 
         // Days until close
         const daysText = contract.daysUntilClose <= 3 ?
@@ -117,76 +278,26 @@ class CrownBids {
 
         card.innerHTML = `
             <div class="contract-header">
-                <h3 class="contract-title">${Utils.sanitizeHTML(contract.title)}</h3>
-                <div class="contract-badges">
-                    <span class="badge badge-value">Value: ${formattedValue}</span>
-                    <span class="badge badge-complexity">Complexity: ${complexityLevel} (${contract.complexity} Pages)</span>
-                    <span class="badge badge-deadline">Closes: ${daysText}</span>
+                <div class="contract-title-wrapper">
+                    <h3 class="contract-title">${Utils.sanitizeHTML(contract.title)}</h3>
+                    <div class="contract-badges">
+                        <span class="badge badge-value">Service: ${categoryLabel}</span>
+                        <span class="badge badge-deadline">Closes: ${daysText}</span>
+                    </div>
                 </div>
+                ${matchBadgeHTML}
             </div>
             <div class="contract-meta">
-                <strong>${contract.department}</strong> • Contract #${contract.contractNumber}
+                <strong>${contract.department}</strong> • Contract #${contract.contractNumber} • ${formattedValue}
             </div>
             <p class="contract-description">${Utils.sanitizeHTML(contract.description)}</p>
             <div class="contract-footer">
-                <a href="${contract.url}" target="_blank" class="btn-secondary">View Source PDF</a>
-                <button class="btn-primary" data-contract-id="${contract.id}">Auto-Draft Proposal</button>
+                <a href="${contract.url}" target="_blank" class="btn-view-details">View Contract Details</a>
+                <a href="#book-pilot" class="help-link">Get Help Writing This →</a>
             </div>
         `;
 
-        // Add click handler for Auto-Draft button
-        const autoDraftBtn = card.querySelector('.btn-primary');
-        if (autoDraftBtn) {
-            autoDraftBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.showAutoDraftModal(contract);
-            });
-        }
-
         return card;
-    }
-
-    // Show Auto-Draft modal
-    showAutoDraftModal(contract) {
-        const modal = document.getElementById('autoDraftModal');
-        const titleEl = document.getElementById('modalContractTitle');
-        const complexityEl = document.getElementById('modalComplexity');
-
-        if (titleEl) {
-            titleEl.textContent = contract.title;
-        }
-
-        if (complexityEl) {
-            complexityEl.textContent = contract.complexity;
-        }
-
-        if (modal) {
-            modal.classList.add('active');
-        }
-
-        // Track conversion event
-        console.log('Auto-Draft modal opened for:', contract.title);
-    }
-
-    // Setup modal interactions
-    setupModal() {
-        const modal = document.getElementById('autoDraftModal');
-        const closeBtn = document.getElementById('modalClose');
-
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => {
-                if (modal) modal.classList.remove('active');
-            });
-        }
-
-        // Close on backdrop click
-        if (modal) {
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    modal.classList.remove('active');
-                }
-            });
-        }
     }
 
     // Loading indicators

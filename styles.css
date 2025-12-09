@@ -182,6 +182,94 @@ body {
     font-size: 24px;
 }
 
+.btn-analyze {
+    background: var(--emerald);
+    color: var(--white);
+    padding: var(--space-3) var(--space-8);
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 16px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+}
+
+.btn-analyze:hover {
+    background: var(--emerald-hover);
+}
+
+/* Scanning Overlay */
+.scanning-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(14, 26, 26, 0.95);
+    z-index: 3000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease;
+}
+
+.scanning-content {
+    text-align: center;
+    max-width: 500px;
+    padding: var(--space-8);
+}
+
+.scanning-spinner {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto var(--space-6);
+    border: 4px solid rgba(29, 191, 115, 0.2);
+    border-top-color: var(--emerald);
+    border-radius: 50%;
+    animation: spin 1s linear infinite, pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
+}
+
+.scanning-title {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--white);
+    margin-bottom: var(--space-3);
+}
+
+.scanning-status {
+    font-size: 16px;
+    color: #9CA3AF;
+    margin-bottom: var(--space-6);
+}
+
+.scanning-progress {
+    width: 100%;
+    height: 4px;
+    background: rgba(29, 191, 115, 0.2);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.scanning-progress-bar {
+    height: 100%;
+    background: var(--emerald);
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 2px;
+}
+
 /* Results Section */
 .results-section {
     background: var(--white);
@@ -218,6 +306,7 @@ body {
     padding: var(--space-6);
     transition: all 0.3s ease;
     cursor: pointer;
+    position: relative;
 }
 
 .contract-card:hover {
@@ -227,6 +316,14 @@ body {
 
 .contract-header {
     margin-bottom: var(--space-4);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-4);
+}
+
+.contract-title-wrapper {
+    flex: 1;
 }
 
 .contract-title {
@@ -235,6 +332,41 @@ body {
     color: var(--text-dark);
     margin-bottom: var(--space-3);
     line-height: 1.3;
+}
+
+/* Match Score Badge */
+.match-score-badge {
+    flex-shrink: 0;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 18px;
+    border: 3px solid;
+    position: relative;
+}
+
+.match-score-badge.high {
+    background: var(--success-light);
+    border-color: var(--success);
+    color: var(--success);
+}
+
+.match-score-badge.medium {
+    background: var(--warning-light);
+    border-color: var(--warning);
+    color: #92400E;
+}
+
+.match-score-label {
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    display: block;
+    margin-top: 2px;
 }
 
 .contract-badges {
@@ -290,6 +422,39 @@ body {
     gap: var(--space-3);
     padding-top: var(--space-4);
     border-top: 1px solid var(--border);
+}
+
+.btn-view-details {
+    padding: var(--space-3) var(--space-6);
+    background: var(--white);
+    color: var(--text-dark);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-view-details:hover {
+    background: #F9FAFB;
+    border-color: var(--text-grey);
+    transform: translateY(-1px);
+}
+
+.help-link {
+    font-size: 14px;
+    color: var(--emerald);
+    text-decoration: none;
+    font-weight: 500;
+    transition: opacity 0.2s;
+}
+
+.help-link:hover {
+    opacity: 0.7;
+    text-decoration: underline;
 }
 
 .btn-secondary {

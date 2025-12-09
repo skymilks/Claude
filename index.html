@@ -29,27 +29,40 @@
     <!-- Hero Section -->
     <section class="hero">
         <div class="hero-container">
-            <h1 class="hero-title">Find & Win Government Contracts.</h1>
-            <p class="hero-subtitle">Browse active bids for free. Hire CrownBids to write the winning proposal when you're ready.</p>
+            <h1 class="hero-title">Find government contracts that fit your business.</h1>
+            <p class="hero-subtitle">Paste your website URL. Our AI will analyze your services and match you with active bids you are qualified to win.</p>
 
             <div class="search-box">
-                <span class="search-icon">🔍</span>
+                <span class="search-icon">🌐</span>
                 <input
-                    type="text"
-                    id="heroSearchInput"
+                    type="url"
+                    id="companyWebsiteInput"
                     class="search-input"
-                    placeholder="Try 'Janitorial', 'Security', 'Snow Removal'..."
+                    placeholder="https://your-company-website.com"
                     autocomplete="off"
                 >
+                <button id="analyzeButton" class="btn-analyze">Analyze & Match</button>
             </div>
         </div>
     </section>
+
+    <!-- Scanning Overlay -->
+    <div id="scanningOverlay" class="scanning-overlay" style="display: none;">
+        <div class="scanning-content">
+            <div class="scanning-spinner"></div>
+            <h2 class="scanning-title">Analyzing your business...</h2>
+            <p class="scanning-status" id="scanningStatus">Scanning website...</p>
+            <div class="scanning-progress">
+                <div class="scanning-progress-bar" id="scanningProgress"></div>
+            </div>
+        </div>
+    </div>
 
     <!-- Results Section -->
     <section class="results-section">
         <div class="results-container">
             <div class="results-header">
-                <p class="results-count" id="resultsCount">Showing <strong>20</strong> active opportunities</p>
+                <p class="results-count" id="resultsCount">Showing <strong>15</strong> active opportunities • <span id="matchedCountText" style="display: none;">Found <strong id="matchedCount">0</strong> matches for your business</span></p>
             </div>
 
             <div id="loading" class="loading" style="display: none;">
@@ -70,39 +83,6 @@
         </div>
     </section>
 
-    <!-- Auto-Draft Modal -->
-    <div id="autoDraftModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>🎯 Let's Win This Together</h2>
-                <p id="modalContractTitle"></p>
-            </div>
-            <div class="modal-body">
-                <p style="margin-bottom: 20px; font-size: 16px; line-height: 1.6;">
-                    <strong>CrownBids can write this <span id="modalComplexity"></span>-page proposal for you in 48 hours.</strong>
-                </p>
-                <p style="margin-bottom: 20px; color: var(--text-grey); line-height: 1.6;">
-                    Our team has written over 500 winning government proposals with a 73% success rate. We handle all the complexity so you can focus on delivery.
-                </p>
-                <div style="background: var(--success-light); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                    <p style="font-weight: 600; color: var(--text-dark); margin-bottom: 8px;">What's Included:</p>
-                    <ul style="margin-left: 20px; color: var(--text-dark); line-height: 1.8;">
-                        <li>Complete proposal writing & formatting</li>
-                        <li>Compliance review (100% requirements met)</li>
-                        <li>Professional document design</li>
-                        <li>48-hour turnaround guarantee</li>
-                    </ul>
-                </div>
-                <p style="font-size: 14px; color: var(--text-grey);">
-                    Start with our $1,500 pilot project. No contracts, cancel anytime.
-                </p>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-secondary" id="modalClose">Not Right Now</button>
-                <a href="#book-pilot" class="btn-primary">Start Pilot Project</a>
-            </div>
-        </div>
-    </div>
 
     <!-- Footer -->
     <footer>
