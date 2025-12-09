@@ -5,6 +5,9 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 
+// Import database
+const { initializeDatabase } = require('./config/database');
+
 // Import routes
 const contractsRouter = require('./routes/contracts');
 const analyzeRouter = require('./routes/analyze');
@@ -67,11 +70,24 @@ app.use((req, res) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 CrownBids API server running on port ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-});
+// Start server with database initialization
+async function startServer() {
+  try {
+    // Initialize database
+    await initializeDatabase();
+
+    // Start listening
+    app.listen(PORT, () => {
+      console.log(`🚀 CrownBids API server running on port ${PORT}`);
+      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
 
 module.exports = app;
