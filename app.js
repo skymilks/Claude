@@ -1,7 +1,7 @@
-// Canadian Government Contracts Browser
+// CrownBids - Canadian Government Contract Matching Platform
 // Main Application Logic
 
-class ContractsBrowser {
+class CrownBids {
     constructor() {
         this.contracts = [];
         this.filteredContracts = [];
@@ -20,25 +20,8 @@ class ContractsBrowser {
         this.setupOnboardingListeners();
         this.populateDepartments();
         this.checkFirstVisit();
-        this.checkLogo();
         this.displayContracts();
         this.updateStats();
-    }
-
-    // Check if logo exists and show it
-    checkLogo() {
-        const logo = document.getElementById('headerLogo');
-        if (logo) {
-            // Try to load the logo
-            const img = new Image();
-            img.onload = () => {
-                logo.style.display = 'block';
-            };
-            img.onerror = () => {
-                logo.style.display = 'none';
-            };
-            img.src = logo.src;
-        }
     }
 
     // User Profile Management
@@ -863,5 +846,5 @@ class ContractsBrowser {
 
 // Initialize the application when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    new ContractsBrowser();
+    new CrownBids();
 });

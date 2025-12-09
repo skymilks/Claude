@@ -1,0 +1,17 @@
+<svg width="160" height="40" viewBox="0 0 160 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Crown Icon -->
+  <g>
+    <!-- Crown Base -->
+    <path d="M8 28H28V30H8V28Z" fill="#00A868"/>
+    <!-- Crown Points -->
+    <path d="M18 10L20 16L22 10L24 16L26 10L28 18L28 26H8L8 18L10 10L12 16L14 10L16 16L18 10Z" fill="#00A868"/>
+    <!-- Crown Jewels -->
+    <circle cx="13" cy="22" r="1.5" fill="#FFFFFF"/>
+    <circle cx="18" cy="22" r="1.5" fill="#FFFFFF"/>
+    <circle cx="23" cy="22" r="1.5" fill="#FFFFFF"/>
+  </g>
+  <!-- Text "CrownBids" -->
+  <g>
+    <text x="38" y="25" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="18" font-weight="600" fill="#1A1F21">CrownBids</text>
+  </g>
+</svg>
