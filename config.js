@@ -11,7 +11,13 @@ const CONFIG = {
 
     // API Endpoints
     api: {
-        // Government of Canada Open Data Portal
+        // CrownBids Backend API (Local Development)
+        backendUrl: 'http://localhost:3001/api',
+
+        // Production: Uncomment and use this when deployed
+        // backendUrl: 'https://crownbids-api.onrender.com/api',
+
+        // Government of Canada Open Data Portal (for future use)
         canadaOpenData: 'https://open.canada.ca/data/en/api/3/action',
 
         // Buyandsell.gc.ca (Government Electronic Tendering Service)
@@ -21,21 +27,12 @@ const CONFIG = {
         corsProxies: [
             'https://api.allorigins.win/raw?url=',
             'https://corsproxy.io/?'
-        ],
-
-        // Future: Custom backend API
-        backend: {
-            base: '/api/v1',
-            auth: '/auth',
-            contracts: '/contracts',
-            users: '/users',
-            matches: '/matches'
-        }
+        ]
     },
 
     // Feature Flags
     features: {
-        realTimeData: false,  // Enable real API calls
+        realTimeData: true,  // Enable real API calls (backend connected!)
         authentication: false,  // Enable user auth
         premiumFeatures: false,  // Enable premium features
         analytics: false,  // Enable analytics tracking

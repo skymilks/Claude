@@ -45,19 +45,152 @@ class APIService {
         return (Date.now() - this.cache.timestamp) < this.cache.ttl;
     }
 
-    // Fetch real contracts from government sources
+    // Fetch real contracts from backend API
     async fetchRealContracts() {
-        // Note: This is a placeholder for real API integration
-        // The actual Government of Canada APIs require specific authentication
-        // and have rate limits. For now, we'll use enhanced sample data.
+        // Check if real-time data is enabled
+        if (!CONFIG.features.realTimeData) {
+            console.log('Real-time data disabled, using mock data');
+            return this.getEnhancedSampleData();
+        }
 
-        // In production, you would call:
-        // 1. https://open.canada.ca/data/en/api/3/action/package_search
-        // 2. https://buyandsell.gc.ca/procurement-data/tender-notice
-        // 3. Provincial procurement APIs
+        try {
+            const apiUrl = `${CONFIG.api.backendUrl}/contracts?limit=50`;
+            console.log('Fetching contracts from backend:', apiUrl);
 
-        // For now, return enhanced sample data with realistic variations
-        return this.getEnhancedSampleData();
+            const response = await fetch(apiUrl);
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const result = await response.json();
+
+            if (result.success && result.data) {
+                console.log(`✅ Loaded ${result.count} contracts from backend`);
+                return this.transformBackendContracts(result.data);
+            } else {
+                throw new Error('Invalid response format from backend');
+            }
+        } catch (error) {
+            console.error('Failed to fetch from backend API:', error);
+            console.log('Falling back to sample data');
+            return this.getEnhancedSampleData();
+        }
+    }
+
+    // Transform backend contract format to frontend format
+    transformBackendContracts(contracts) {
+        return contracts.map(contract => {
+            // Calculate days until close
+            const closeDate = new Date(contract.close_date);
+            const daysUntilClose = Math.ceil((closeDate - new Date()) / (1000 * 60 * 60 * 24));
+
+            // Calculate complexity from value
+            const complexity = Math.floor(contract.value / 100000) + Math.floor(Math.random() * 20) + 20;
+
+            return {
+                id: contract.id,
+                title: contract.title,
+                department: contract.department,
+                description: contract.description || '',
+                value: parseFloat(contract.value),
+                status: contract.status,
+                publishDate: contract.publish_date ? contract.publish_date.split('T')[0] : null,
+                closeDate: contract.close_date ? contract.close_date.split('T')[0] : null,
+                contractNumber: contract.external_id,
+                url: contract.source_url || 'https://buyandsell.gc.ca',
+                category: contract.category,
+                keywords: contract.keywords || [],
+                location: contract.location,
+                complexity: Math.min(complexity, 150),
+                daysUntilClose: daysUntilClose,
+                matchScore: contract.match_score || null
+            };
+        });
+    }
+
+    // Analyze company URL and get matching contracts
+    async analyzeCompanyURL(url) {
+        // Check if real-time data is enabled
+        if (!CONFIG.features.realTimeData) {
+            console.log('Real-time data disabled, using client-side analysis');
+            return this.clientSideAnalysis(url);
+        }
+
+        try {
+            const apiUrl = `${CONFIG.api.backendUrl}/analyze`;
+            console.log('Analyzing URL via backend:', apiUrl);
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ url })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const result = await response.json();
+
+            if (result.success) {
+                console.log(`✅ URL analyzed: ${result.analysis.category}, ${result.matches.count} matches found`);
+                return {
+                    category: result.analysis.category,
+                    keywords: result.analysis.keywords,
+                    confidence: result.analysis.confidence,
+                    contracts: this.transformBackendContracts(result.matches.contracts)
+                };
+            } else {
+                throw new Error('Invalid response from backend');
+            }
+        } catch (error) {
+            console.error('Failed to analyze URL via backend:', error);
+            console.log('Falling back to client-side analysis');
+            return this.clientSideAnalysis(url);
+        }
+    }
+
+    // Client-side URL analysis (fallback)
+    clientSideAnalysis(url) {
+        const lowerURL = url.toLowerCase();
+        let category = null;
+        let keywords = [];
+
+        // Detect category from URL
+        if (lowerURL.includes('security') || lowerURL.includes('guard')) {
+            category = 'security';
+            keywords = ['security', 'guard', 'patrol', 'cctv', 'monitoring'];
+        } else if (lowerURL.includes('clean') || lowerURL.includes('janitorial')) {
+            category = 'janitorial';
+            keywords = ['cleaning', 'janitorial', 'custodial', 'sanitation'];
+        } else if (lowerURL.includes('landscape') || lowerURL.includes('lawn') || lowerURL.includes('snow')) {
+            category = 'landscaping';
+            keywords = ['landscaping', 'grounds', 'lawn', 'snow', 'maintenance'];
+        }
+
+        // Get all contracts
+        const allContracts = this.getSampleContracts();
+
+        // Filter by category if detected
+        const filteredContracts = category
+            ? allContracts.filter(c => c.category === category)
+            : allContracts;
+
+        // Add match scores
+        const contractsWithScores = filteredContracts.map(contract => ({
+            ...contract,
+            matchScore: category && contract.category === category ? 85 : 50
+        }));
+
+        return {
+            category: category || 'other',
+            keywords: keywords,
+            confidence: category ? 'medium' : 'low',
+            contracts: contractsWithScores
+        };
     }
 
     // Get enhanced sample data (more realistic than static sample)

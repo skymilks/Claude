@@ -76,31 +76,26 @@ class CrownBids {
         // Show scanning overlay
         this.showScanning();
 
-        // Simulate 3-second analysis with progress updates
-        await this.simulateAnalysis(url);
+        // Simulate scanning animation while the real analysis happens
+        const analysisPromise = this.apiService.analyzeCompanyURL(url);
+        const animationPromise = this.simulateAnalysis(url);
 
-        // Detect category from URL
-        const category = this.detectCategory(url);
-        this.userCategory = category;
+        // Wait for both to complete (animation ensures minimum 3-second display)
+        await animationPromise;
+        const result = await analysisPromise;
 
-        // Filter contracts by category
-        if (category) {
-            this.filteredContracts = this.contracts.filter(c => c.category === category);
+        // Store user's category
+        this.userCategory = result.category;
 
-            // Calculate match scores
-            this.filteredContracts = this.filteredContracts.map(contract => ({
-                ...contract,
-                matchScore: this.calculateMatchScore(contract, url)
-            }));
-
-            // Sort by match score (highest first)
-            this.filteredContracts.sort((a, b) => b.matchScore - a.matchScore);
+        // Use contracts from backend (already filtered and scored)
+        if (result.contracts && result.contracts.length > 0) {
+            this.filteredContracts = result.contracts;
+            console.log(`✅ Showing ${result.contracts.length} matches for category: ${result.category}`);
         } else {
-            // No category detected - show all with generic scores
-            this.filteredContracts = this.contracts.map(contract => ({
-                ...contract,
-                matchScore: Math.floor(Math.random() * 30) + 40 // 40-70%
-            }));
+            // No matches found
+            this.filteredContracts = [];
+            Utils.showToast('No matching contracts found. Showing all available contracts.', 'info');
+            this.filteredContracts = this.contracts;
         }
 
         // Hide scanning and display results
