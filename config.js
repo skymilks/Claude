@@ -32,7 +32,7 @@ const CONFIG = {
 
     // Feature Flags
     features: {
-        realTimeData: true,  // Enable real API calls (backend connected!)
+        realTimeData: false,  // Disabled for GitHub Pages (static hosting) - uses mock data
         authentication: false,  // Enable user auth
         premiumFeatures: false,  // Enable premium features
         analytics: false,  // Enable analytics tracking
