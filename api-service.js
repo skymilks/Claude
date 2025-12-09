@@ -77,11 +77,17 @@ class APIService {
             const valueVariation = 0.8 + (Math.random() * 0.4);
             const adjustedValue = Math.round(contract.value * valueVariation);
 
+            // Calculate complexity (page count) based on value
+            const complexity = Math.floor(contract.value / 100000) + Math.floor(Math.random() * 20) + 20;
+            const daysUntilClose = Math.ceil((closeDate - new Date()) / (1000 * 60 * 60 * 24));
+
             return {
                 ...contract,
                 publishDate: publishDate.toISOString().split('T')[0],
                 closeDate: closeDate.toISOString().split('T')[0],
                 value: adjustedValue,
+                complexity: Math.min(complexity, 150), // Cap at 150 pages
+                daysUntilClose: daysUntilClose,
                 status: closeDate > new Date() ? 'active' : 'closed'
             };
         });
