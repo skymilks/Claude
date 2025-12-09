@@ -8,6 +8,7 @@ const rateLimit = require('express-rate-limit');
 // Import routes
 const contractsRouter = require('./routes/contracts');
 const analyzeRouter = require('./routes/analyze');
+const marketingRouter = require('./routes/marketing');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -45,6 +46,7 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/contracts', contractsRouter);
 app.use('/api/analyze', analyzeRouter);
+app.use('/api/marketing', marketingRouter);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

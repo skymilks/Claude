@@ -90,6 +90,81 @@ async function initializeDatabase() {
       );
     `);
 
+    // Create customer_journeys table for marketing funnel tracking
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS customer_journeys (
+        id SERIAL PRIMARY KEY,
+        user_id VARCHAR(255) NOT NULL,
+        action VARCHAR(255) NOT NULL,
+        stage VARCHAR(50),
+        metadata JSONB,
+        source VARCHAR(100),
+        device VARCHAR(100),
+        timestamp TIMESTAMP DEFAULT NOW(),
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    // Create index on user_id for faster lookups
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_customer_journeys_user_id ON customer_journeys(user_id);
+    `);
+
+    // Create index on stage for funnel analysis
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_customer_journeys_stage ON customer_journeys(stage);
+    `);
+
+    // Create index on timestamp for time-based queries
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_customer_journeys_timestamp ON customer_journeys(timestamp);
+    `);
+
+    // Create marketing_metrics table for storing calculated metrics
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS marketing_metrics (
+        id SERIAL PRIMARY KEY,
+        metric_name VARCHAR(255) NOT NULL,
+        metric_type VARCHAR(100),
+        value DECIMAL(10, 2),
+        dimensions JSONB,
+        time_range VARCHAR(50),
+        calculated_at TIMESTAMP DEFAULT NOW(),
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    // Create index on metric_name and calculated_at
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_marketing_metrics_name_date ON marketing_metrics(metric_name, calculated_at);
+    `);
+
+    // Create user_segments table for segmentation and targeting
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_segments (
+        id SERIAL PRIMARY KEY,
+        user_id VARCHAR(255) NOT NULL,
+        segment_name VARCHAR(255) NOT NULL,
+        segment_value VARCHAR(255),
+        stickiness_score DECIMAL(5, 2),
+        engagement_level VARCHAR(50),
+        lifecycle_stage VARCHAR(50),
+        last_activity TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    // Create index on user_id
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_user_segments_user_id ON user_segments(user_id);
+    `);
+
+    // Create index on segment_name for segment analysis
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_user_segments_name ON user_segments(segment_name);
+    `);
+
     console.log('✅ Database tables initialized successfully');
   } catch (error) {
     console.error('❌ Database initialization error:', error);
