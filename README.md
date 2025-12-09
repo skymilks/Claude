@@ -1,6 +1,37 @@
-# 🍁 Canadian Government Contracts Browser
+# 🍁 CrownBids - Canadian Government Contracts Platform
 
-A simple, user-friendly web application for browsing and searching Canadian government contracts. Built with HTML, CSS, and JavaScript - perfect for beginners!
+A full-stack web application for discovering and matching Canadian government contracts to your business. Features intelligent website analysis, real-time contract data, and smart matching algorithms.
+
+## 🚀 Quick Start
+
+### Option 1: Frontend Only (Demo Mode)
+Just open `index.html` in your browser - uses client-side mock data.
+
+### Option 2: Full Stack (Production Mode)
+
+**1. Start the Backend API**
+```bash
+cd backend
+npm install
+cp .env.example .env
+# Edit .env with your database credentials
+npm run dev
+```
+
+**2. Open Frontend**
+```bash
+# Open index.html in browser, or serve it:
+python -m http.server 8000
+# Visit http://localhost:8000
+```
+
+**3. Update Frontend Config**
+Edit `config.js` to point to your backend:
+```javascript
+API_BASE_URL: 'http://localhost:3001/api'
+```
+
+**See [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md) for complete production setup guide**
 
 ## ✨ Smart Contract Matching with Website Analysis
 
@@ -94,26 +125,58 @@ http-server
 ## 📁 Project Structure
 
 ```
-Claude/
-├── index.html      # Main HTML file with the page structure
-├── styles.css      # All styling and visual design
-├── app.js          # JavaScript logic for functionality
-└── README.md       # This file
+CrownBids/
+├── frontend/           # Client-side application
+│   ├── index.html     # Main HTML file
+│   ├── styles.css     # Styling and design
+│   ├── app.js         # Frontend logic
+│   ├── api-service.js # API integration
+│   ├── utils.js       # Utility functions
+│   └── config.js      # Configuration
+├── backend/           # Server-side API
+│   ├── src/
+│   │   ├── routes/        # API endpoints
+│   │   ├── services/      # Business logic
+│   │   ├── config/        # Database config
+│   │   └── server.js      # Express server
+│   ├── package.json
+│   └── README.md          # Backend documentation
+├── PRODUCT_ROADMAP.md    # Development roadmap
+└── README.md             # This file
 ```
+
+## 🏗️ Architecture
+
+### Frontend (Client-Side)
+- **Framework**: Vanilla JavaScript (no dependencies)
+- **Styling**: Custom CSS with design system
+- **Features**: URL analysis, smart filtering, match scoring
+
+### Backend (Server-Side) 🆕
+- **Runtime**: Node.js 18+
+- **Framework**: Express.js
+- **Database**: PostgreSQL
+- **Features**:
+  - Real contract data from buyandsell.gc.ca
+  - Intelligent URL analysis with web scraping
+  - Smart contract matching algorithm
+  - RESTful API with caching
+
+**See [backend/README.md](backend/README.md) for full backend documentation**
 
 ## ✨ Features
 
 ### Current Features
-- ✅ **Search Functionality**: Search across all contract fields
-- ✅ **Advanced Filters**: Filter by department and status
-- ✅ **Sorting Options**: Sort by date or contract value
-- ✅ **Statistics Dashboard**: View total contracts, active opportunities, and total value
+- ✅ **Smart URL Analysis**: Paste your company URL, get matched contracts
+- ✅ **Real Contract Data**: Integrates with buyandsell.gc.ca API
+- ✅ **Intelligent Matching**: AI-powered match scoring (0-98%)
+- ✅ **Advanced Search**: Search across all contract fields
+- ✅ **Category Filtering**: Security, Janitorial, Landscaping, Construction, IT, Consulting
+- ✅ **Match Scores**: See how well each contract fits your business
 - ✅ **Responsive Design**: Works on desktop, tablet, and mobile
-- ✅ **Pagination**: Easy navigation through multiple contracts
-- ✅ **Beautiful UI**: Modern, clean interface with smooth animations
-
-### Sample Data
-The application currently uses **15 sample contracts** based on real Canadian government contract types. This is perfect for learning and testing!
+- ✅ **Beautiful UI**: Modern interface with scanning animations
+- ✅ **Database Storage**: PostgreSQL for scalable data management
+- ✅ **API Caching**: 1-hour cache for optimal performance
 
 ## 🔧 How to Customize
 
