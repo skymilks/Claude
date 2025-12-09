@@ -26,16 +26,15 @@ class CrownBids {
 
     // User Profile Management
     loadUserProfile() {
-        const savedProfile = localStorage.getItem('userProfile');
-        if (savedProfile) {
-            this.userProfile = JSON.parse(savedProfile);
+        this.userProfile = Utils.getFromStorage(CONFIG.storage.userProfile);
+        if (this.userProfile) {
             this.displayUserProfile();
         }
     }
 
     saveUserProfile(profileData) {
         this.userProfile = profileData;
-        localStorage.setItem('userProfile', JSON.stringify(profileData));
+        Utils.setToStorage(CONFIG.storage.userProfile, profileData);
         this.displayUserProfile();
     }
 
@@ -98,20 +97,18 @@ class CrownBids {
 
         // Validate required fields
         if (!companyName) {
-            alert('Please enter your company name');
+            Utils.showToast('Please enter your company name', 'error');
             return;
         }
 
         if (!website) {
-            alert('Please enter your company website URL');
+            Utils.showToast('Please enter your company website URL', 'error');
             return;
         }
 
         // Validate URL format
-        try {
-            new URL(website);
-        } catch (e) {
-            alert('Please enter a valid website URL (e.g., https://yourcompany.com)');
+        if (!Utils.isValidURL(website)) {
+            Utils.showToast('Please enter a valid website URL (e.g., https://yourcompany.com)', 'error');
             return;
         }
 
@@ -181,9 +178,9 @@ class CrownBids {
 
             // Show message that we used manual input
             if (description) {
-                alert(`Profile created! We extracted ${allKeywords.length} keywords from your input.`);
+                Utils.showToast(`Profile created! We extracted ${allKeywords.length} keywords from your input.`, 'success', 4000);
             } else {
-                alert(`Profile created! Please edit your profile to add more details for better matching.`);
+                Utils.showToast('Profile created! Please edit your profile to add more details for better matching.', 'success', 4000);
             }
 
             // Refresh display with matching
@@ -216,7 +213,11 @@ class CrownBids {
 
     showAnalysisResults(totalKeywords, websiteKeywords) {
         this.hideAnalyzingState();
-        alert(`✅ Website analyzed successfully!\n\nFound ${websiteKeywords} keywords from your website\nTotal ${totalKeywords} keywords extracted\n\nWe'll now show you the best matching contracts!`);
+        Utils.showToast(
+            `Website analyzed successfully! Found ${websiteKeywords} keywords from your website. Total ${totalKeywords} keywords extracted for matching.`,
+            'success',
+            5000
+        );
     }
 
     async crawlWebsite(url) {
@@ -315,19 +316,7 @@ class CrownBids {
     }
 
     extractKeywords(text) {
-        if (!text) return [];
-
-        // Common words to ignore
-        const stopWords = new Set(['a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'he', 'in', 'is', 'it', 'its', 'of', 'on', 'that', 'the', 'to', 'was', 'will', 'with', 'we', 'our', 'your', 'their']);
-
-        // Extract words
-        const words = text.toLowerCase()
-            .replace(/[^\w\s]/g, ' ')
-            .split(/\s+/)
-            .filter(word => word.length > 3 && !stopWords.has(word));
-
-        // Get unique words
-        return [...new Set(words)];
+        return Utils.extractKeywords(text);
     }
 
     // Intelligent Matching Algorithm
@@ -827,20 +816,11 @@ class CrownBids {
     }
 
     formatCurrency(value) {
-        return new Intl.NumberFormat('en-CA', {
-            style: 'currency',
-            currency: 'CAD',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-        }).format(value);
+        return Utils.formatCurrency(value);
     }
 
     formatDate(dateString) {
-        return new Date(dateString).toLocaleDateString('en-CA', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
+        return Utils.formatDate(dateString);
     }
 }
 
