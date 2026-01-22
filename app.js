@@ -310,4 +310,51 @@ class CrownBids {
 // Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     new CrownBids();
+
+    // Setup tutorial functionality
+    setupTutorial();
 });
+
+// Tutorial functionality
+function setupTutorial() {
+    const tutorialLink = document.getElementById('tutorialLink');
+    const tutorialSection = document.getElementById('tutorial');
+    const closeButton = document.querySelector('.btn-close-tutorial');
+    const tabButtons = document.querySelectorAll('.tutorial-tab-btn');
+
+    if (!tutorialLink || !tutorialSection) return;
+
+    // Show tutorial
+    tutorialLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        tutorialSection.style.display = 'block';
+        window.scrollTo(0, 0);
+    });
+
+    // Close tutorial
+    if (closeButton) {
+        closeButton.addEventListener('click', () => {
+            tutorialSection.style.display = 'none';
+        });
+    }
+
+    // Tab switching
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const tabName = button.getAttribute('data-tab');
+
+            // Remove active class from all buttons and content
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tutorial-tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+
+            // Add active class to clicked button and corresponding content
+            button.classList.add('active');
+            const tabContent = document.getElementById(tabName);
+            if (tabContent) {
+                tabContent.classList.add('active');
+            }
+        });
+    });
+}

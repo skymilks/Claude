@@ -20,6 +20,7 @@
                 <span class="logo-text">CrownBids</span>
             </a>
             <div class="navbar-actions">
+                <a href="#tutorial" class="navbar-link" id="tutorialLink">Learn Claude Code</a>
                 <a href="#pricing" class="navbar-link">Pricing</a>
                 <a href="#book-pilot" class="btn-pilot">Book Pilot ($1,500)</a>
             </div>
@@ -83,6 +84,277 @@
         </div>
     </section>
 
+
+    <!-- Tutorial Section -->
+    <section id="tutorial" class="tutorial-section" style="display: none;">
+        <div class="tutorial-container">
+            <div class="tutorial-header">
+                <h2 class="tutorial-title">Learn Claude Code</h2>
+                <p class="tutorial-subtitle">Master AI-assisted development using CrownBids as your learning project</p>
+            </div>
+
+            <div class="tutorial-tabs">
+                <button class="tutorial-tab-btn active" data-tab="intro">Introduction</button>
+                <button class="tutorial-tab-btn" data-tab="exploration">Code Exploration</button>
+                <button class="tutorial-tab-btn" data-tab="modification">Making Changes</button>
+                <button class="tutorial-tab-btn" data-tab="features">Add Features</button>
+                <button class="tutorial-tab-btn" data-tab="debugging">Debugging</button>
+                <button class="tutorial-tab-btn" data-tab="reference">Quick Reference</button>
+            </div>
+
+            <div class="tutorial-content">
+                <!-- Introduction Tab -->
+                <div id="intro" class="tutorial-tab-content active">
+                    <h3>What is Claude Code?</h3>
+                    <p>Claude Code is Anthropic's official CLI tool that helps you work with Claude AI to understand, build, debug, and refactor your code.</p>
+
+                    <div class="tutorial-feature-grid">
+                        <div class="feature-card">
+                            <div class="feature-icon">🔍</div>
+                            <h4>Code Exploration</h4>
+                            <p>Quickly understand how code works without reading everything manually</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">✏️</div>
+                            <h4>Code Generation</h4>
+                            <p>Generate new code that matches your existing style and patterns</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">🐛</div>
+                            <h4>Debugging</h4>
+                            <p>Identify and fix issues faster with AI-powered analysis</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">📚</div>
+                            <h4>Documentation</h4>
+                            <p>Generate comprehensive documentation and test cases</p>
+                        </div>
+                    </div>
+
+                    <h4 style="margin-top: 2rem;">About CrownBids</h4>
+                    <p>CrownBids is a full-stack web application that helps Canadian businesses discover government contracts. It combines:</p>
+                    <ul style="margin-top: 1rem;">
+                        <li><strong>Frontend:</strong> Vanilla JavaScript, responsive CSS, interactive contract browsing</li>
+                        <li><strong>Backend:</strong> Node.js/Express API, PostgreSQL database, web scraping service</li>
+                        <li><strong>Features:</strong> Contract matching, website analysis, smart scoring algorithm</li>
+                    </ul>
+                </div>
+
+                <!-- Code Exploration Tab -->
+                <div id="exploration" class="tutorial-tab-content">
+                    <h3>Code Exploration Exercises</h3>
+                    <p>Learn to navigate the codebase using Claude Code questions.</p>
+
+                    <div class="code-example">
+                        <h4>📋 Exercise 1: Understanding the Matching Algorithm</h4>
+                        <p class="example-description">Ask Claude to explain how contracts are matched to user websites.</p>
+                        <code class="code-block">claude-code "How does the contract matching algorithm calculate match scores?"</code>
+                        <p class="example-result"><strong>Expected:</strong> Claude finds the matching logic in api-service.js and explains keyword extraction and scoring.</p>
+                    </div>
+
+                    <div class="code-example">
+                        <h4>🔗 Exercise 2: Tracing API Integration</h4>
+                        <p class="example-description">Understand how frontend and backend communicate.</p>
+                        <code class="code-block">claude-code "How does the frontend communicate with the backend API?"</code>
+                        <p class="example-result"><strong>Expected:</strong> Claude explains the fetch wrapper in api-service.js and error handling.</p>
+                    </div>
+
+                    <div class="code-example">
+                        <h4>💾 Exercise 3: Database Setup</h4>
+                        <p class="example-description">Learn how PostgreSQL is initialized and configured.</p>
+                        <code class="code-block">claude-code "How is the PostgreSQL database initialized in the backend?"</code>
+                        <p class="example-result"><strong>Expected:</strong> Claude shows backend/src/config/database.js and explains the schema.</p>
+                    </div>
+                </div>
+
+                <!-- Making Changes Tab -->
+                <div id="modification" class="tutorial-tab-content">
+                    <h3>Making Your First Changes</h3>
+                    <p>Successfully modify the application with Claude Code assistance.</p>
+
+                    <div class="code-example">
+                        <h4>🎯 Exercise 1: Improve Error Messages</h4>
+                        <p class="example-description">Update error handling for user-friendly messages.</p>
+                        <code class="code-block">claude-code "Improve error messages to be more user-friendly"</code>
+                        <ol style="margin-top: 1rem;">
+                            <li>Review Claude's suggestions</li>
+                            <li>Apply the changes to utils.js or app.js</li>
+                            <li>Test by triggering an error condition</li>
+                        </ol>
+                    </div>
+
+                    <div class="code-example">
+                        <h4>📝 Exercise 2: Add Logging</h4>
+                        <p class="example-description">Track API calls and contract matching for debugging.</p>
+                        <code class="code-block">claude-code "Add detailed logging to track API calls and contract matching"</code>
+                        <ol style="margin-top: 1rem;">
+                            <li>Implement logging in api-service.js</li>
+                            <li>Add logging to the matching algorithm</li>
+                            <li>Check browser console for log output</li>
+                        </ol>
+                    </div>
+
+                    <div class="code-example">
+                        <h4>⚡ Exercise 3: Optimize Performance</h4>
+                        <p class="example-description">Improve contract loading speed.</p>
+                        <code class="code-block">claude-code "What can we optimize for faster contract loading?"</code>
+                        <ol style="margin-top: 1rem;">
+                            <li>Review existing caching strategy</li>
+                            <li>Implement suggested optimizations</li>
+                            <li>Measure performance improvement</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <!-- Add Features Tab -->
+                <div id="features" class="tutorial-tab-content">
+                    <h3>Building New Features</h3>
+                    <p>Use Claude Code to guide you through feature development.</p>
+
+                    <div class="code-example">
+                        <h4>❤️ Exercise 1: Add Favorites Feature</h4>
+                        <p class="example-description">Let users save their favorite contracts.</p>
+                        <code class="code-block">claude-code "How can users save favorite contracts using localStorage?"</code>
+                        <ol style="margin-top: 1rem;">
+                            <li>Design localStorage integration</li>
+                            <li>Add save/remove favorite functions</li>
+                            <li>Create UI button in contract cards</li>
+                            <li>Display favorites list</li>
+                        </ol>
+                    </div>
+
+                    <div class="code-example">
+                        <h4>📥 Exercise 2: Create Export Functionality</h4>
+                        <p class="example-description">Export matched contracts as CSV.</p>
+                        <code class="code-block">claude-code "Add ability to export matched contracts as CSV"</code>
+                        <ol style="margin-top: 1rem;">
+                            <li>Generate export logic using existing contract data</li>
+                            <li>Create CSV formatter function</li>
+                            <li>Add export button to UI</li>
+                            <li>Test with sample data</li>
+                        </ol>
+                    </div>
+
+                    <div class="code-example">
+                        <h4>📊 Exercise 3: Build Search Analytics</h4>
+                        <p class="example-description">Track which contracts are most viewed.</p>
+                        <code class="code-block">claude-code "Track which contracts are most frequently viewed"</code>
+                        <ol style="margin-top: 1rem;">
+                            <li>Implement analytics collection</li>
+                            <li>Store data in localStorage or backend</li>
+                            <li>Create simple dashboard</li>
+                            <li>Display popular contracts</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <!-- Debugging Tab -->
+                <div id="debugging" class="tutorial-tab-content">
+                    <h3>Debugging with Claude Code</h3>
+                    <p>Use Claude to identify and fix issues efficiently.</p>
+
+                    <div class="code-example">
+                        <h4>🔧 Scenario: Silent Failures</h4>
+                        <p class="example-description">Users report URL analysis fails without clear errors.</p>
+                        <code class="code-block">claude-code "Why might URL analysis fail silently? Show me error paths."</code>
+                        <p class="example-result"><strong>Steps:</strong></p>
+                        <ol style="margin-top: 1rem;">
+                            <li>Claude identifies potential failure points</li>
+                            <li>Ask for enhanced error logging</li>
+                            <li>Create test cases for edge cases</li>
+                            <li>Fix identified issues</li>
+                        </ol>
+                    </div>
+
+                    <div class="code-example">
+                        <h4>🔐 Scenario: Security Review</h4>
+                        <p class="example-description">Identify potential security vulnerabilities.</p>
+                        <code class="code-block">claude-code "What security measures are in place? Are there vulnerabilities?"</code>
+                        <p class="example-result"><strong>Expected areas Claude reviews:</strong></p>
+                        <ul style="margin-top: 1rem;">
+                            <li>API security headers (Helmet, CORS)</li>
+                            <li>Input validation and sanitization</li>
+                            <li>Rate limiting configuration</li>
+                            <li>Sensitive data exposure</li>
+                        </ul>
+                    </div>
+
+                    <div class="code-example">
+                        <h4>⚠️ Debugging Workflow</h4>
+                        <ol style="margin-top: 1rem;">
+                            <li>Describe the problem clearly</li>
+                            <li>Provide relevant error messages</li>
+                            <li>Ask Claude for potential causes</li>
+                            <li>Have Claude generate fixes</li>
+                            <li>Test thoroughly before committing</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <!-- Quick Reference Tab -->
+                <div id="reference" class="tutorial-tab-content">
+                    <h3>Claude Code Quick Reference</h3>
+
+                    <h4>📂 Common File Locations</h4>
+                    <div class="reference-table">
+                        <div class="ref-row">
+                            <span class="ref-file">index.html</span>
+                            <span class="ref-desc">Application UI structure</span>
+                        </div>
+                        <div class="ref-row">
+                            <span class="ref-file">app.js</span>
+                            <span class="ref-desc">Main application logic (CrownBids class)</span>
+                        </div>
+                        <div class="ref-row">
+                            <span class="ref-file">api-service.js</span>
+                            <span class="ref-desc">Backend API integration and caching</span>
+                        </div>
+                        <div class="ref-row">
+                            <span class="ref-file">styles.css</span>
+                            <span class="ref-desc">Responsive design and UI styling</span>
+                        </div>
+                        <div class="ref-row">
+                            <span class="ref-file">utils.js</span>
+                            <span class="ref-desc">Helper functions and utilities</span>
+                        </div>
+                        <div class="ref-row">
+                            <span class="ref-file">backend/src/server.js</span>
+                            <span class="ref-desc">Express server and middleware</span>
+                        </div>
+                    </div>
+
+                    <h4 style="margin-top: 2rem;">🎯 Common Commands</h4>
+                    <div class="reference-commands">
+                        <div class="cmd-group">
+                            <strong>Exploration</strong>
+                            <code>claude-code "How does [feature] work?"</code>
+                            <code>claude-code "Where is [functionality] implemented?"</code>
+                        </div>
+                        <div class="cmd-group">
+                            <strong>Implementation</strong>
+                            <code>claude-code "Add [feature] following existing patterns"</code>
+                            <code>claude-code "Fix [bug] in [file]"</code>
+                        </div>
+                        <div class="cmd-group">
+                            <strong>Analysis</strong>
+                            <code>claude-code "Review [file] for security issues"</code>
+                            <code>claude-code "Identify performance bottlenecks in [area]"</code>
+                        </div>
+                    </div>
+
+                    <h4 style="margin-top: 2rem;">📚 Resource Links</h4>
+                    <ul style="margin-top: 1rem;">
+                        <li><a href="CLAUDE_CODE_TUTORIAL.md" target="_blank">Complete Tutorial Guide</a> - Comprehensive documentation</li>
+                        <li><a href="README.md" target="_blank">Project README</a> - Overview and setup</li>
+                        <li><a href="DEPLOYMENT.md" target="_blank">Deployment Guide</a> - How to deploy</li>
+                        <li><a href="FRONTEND_BACKEND_INTEGRATION.md" target="_blank">Integration Guide</a> - API details</li>
+                    </ul>
+                </div>
+            </div>
+
+            <button class="btn-close-tutorial">Close Tutorial</button>
+        </div>
+    </section>
 
     <!-- Footer -->
     <footer>

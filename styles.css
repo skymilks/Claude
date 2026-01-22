@@ -735,3 +735,308 @@ footer a:hover {
         opacity: 0;
     }
 }
+
+/* Tutorial Section */
+.tutorial-section {
+    background: linear-gradient(135deg, #f8f9fa 0%, #f0f4f8 100%);
+    padding: var(--space-16) var(--space-8);
+    min-height: 100vh;
+}
+
+.tutorial-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.tutorial-header {
+    text-align: center;
+    margin-bottom: var(--space-16);
+}
+
+.tutorial-title {
+    font-size: 48px;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: var(--space-3);
+}
+
+.tutorial-subtitle {
+    font-size: 20px;
+    color: var(--text-grey);
+}
+
+.tutorial-tabs {
+    display: flex;
+    gap: var(--space-4);
+    margin-bottom: var(--space-8);
+    flex-wrap: wrap;
+    border-bottom: 2px solid var(--border);
+}
+
+.tutorial-tab-btn {
+    padding: var(--space-4) var(--space-6);
+    background: transparent;
+    border: none;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--text-grey);
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    position: relative;
+    bottom: -2px;
+}
+
+.tutorial-tab-btn:hover {
+    color: var(--text-dark);
+}
+
+.tutorial-tab-btn.active {
+    color: var(--emerald);
+    border-bottom-color: var(--emerald);
+}
+
+.tutorial-content {
+    background: var(--white);
+    border-radius: 12px;
+    padding: var(--space-8);
+    box-shadow: var(--shadow-md);
+}
+
+.tutorial-tab-content {
+    display: none;
+}
+
+.tutorial-tab-content.active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+}
+
+.tutorial-tab-content h3 {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: var(--space-6);
+}
+
+.tutorial-tab-content h4 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-top: var(--space-8);
+    margin-bottom: var(--space-3);
+}
+
+.tutorial-tab-content p {
+    font-size: 16px;
+    color: var(--text-grey);
+    line-height: 1.6;
+    margin-bottom: var(--space-4);
+}
+
+.tutorial-tab-content ul {
+    list-style-position: inside;
+    margin-bottom: var(--space-6);
+    color: var(--text-grey);
+}
+
+.tutorial-tab-content li {
+    margin-bottom: var(--space-2);
+}
+
+/* Feature Grid */
+.tutorial-feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--space-6);
+    margin: var(--space-8) 0;
+}
+
+.feature-card {
+    background: linear-gradient(135deg, #f0f9ff 0%, #f0f4f8 100%);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: var(--space-6);
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.feature-card:hover {
+    border-color: var(--emerald);
+    box-shadow: var(--shadow-md);
+}
+
+.feature-icon {
+    font-size: 48px;
+    margin-bottom: var(--space-3);
+}
+
+.feature-card h4 {
+    margin: 0 0 var(--space-2) 0;
+}
+
+.feature-card p {
+    font-size: 14px;
+    margin: 0;
+}
+
+/* Code Examples */
+.code-example {
+    background: #f3f4f6;
+    border-left: 4px solid var(--emerald);
+    border-radius: 8px;
+    padding: var(--space-6);
+    margin: var(--space-6) 0;
+}
+
+.example-description {
+    font-size: 15px;
+    color: var(--text-grey);
+    margin-bottom: var(--space-4);
+}
+
+.code-block {
+    background: #1f2937;
+    color: #e5e7eb;
+    padding: var(--space-4);
+    border-radius: 6px;
+    font-family: 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    overflow-x: auto;
+    display: block;
+    margin: var(--space-4) 0;
+    line-height: 1.5;
+}
+
+.example-result {
+    background: var(--success-light);
+    color: #065F46;
+    padding: var(--space-4);
+    border-radius: 6px;
+    font-size: 14px;
+    margin-top: var(--space-4);
+}
+
+/* Reference Table */
+.reference-table {
+    background: #f9fafb;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin: var(--space-6) 0;
+}
+
+.ref-row {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    padding: var(--space-4) var(--space-6);
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+    font-size: 14px;
+}
+
+.ref-row:last-child {
+    border-bottom: none;
+}
+
+.ref-file {
+    font-weight: 600;
+    color: var(--emerald);
+    font-family: 'Monaco', 'Courier New', monospace;
+}
+
+.ref-desc {
+    color: var(--text-grey);
+}
+
+/* Reference Commands */
+.reference-commands {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--space-6);
+    margin: var(--space-6) 0;
+}
+
+.cmd-group {
+    background: #f9fafb;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: var(--space-6);
+}
+
+.cmd-group strong {
+    display: block;
+    margin-bottom: var(--space-3);
+    color: var(--text-dark);
+}
+
+.cmd-group code {
+    display: block;
+    background: #1f2937;
+    color: #e5e7eb;
+    padding: var(--space-3);
+    border-radius: 4px;
+    font-family: 'Monaco', 'Courier New', monospace;
+    font-size: 13px;
+    margin-bottom: var(--space-2);
+    overflow-x: auto;
+}
+
+.cmd-group code:last-child {
+    margin-bottom: 0;
+}
+
+/* Close Button */
+.btn-close-tutorial {
+    display: block;
+    margin: var(--space-16) auto 0;
+    padding: var(--space-3) var(--space-8);
+    background: transparent;
+    color: var(--text-grey);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-close-tutorial:hover {
+    background: #f9fafb;
+    color: var(--text-dark);
+    border-color: var(--text-grey);
+}
+
+/* Responsive Tutorial */
+@media (max-width: 768px) {
+    .tutorial-title {
+        font-size: 36px;
+    }
+
+    .tutorial-tabs {
+        flex-wrap: wrap;
+        gap: var(--space-2);
+    }
+
+    .tutorial-tab-btn {
+        padding: var(--space-3) var(--space-4);
+        font-size: 14px;
+    }
+
+    .tutorial-content {
+        padding: var(--space-6);
+    }
+
+    .tutorial-tab-content h3 {
+        font-size: 24px;
+    }
+
+    .ref-row {
+        grid-template-columns: 1fr;
+        gap: var(--space-2);
+    }
+
+    .reference-commands {
+        grid-template-columns: 1fr;
+    }
+}
