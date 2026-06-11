@@ -12,6 +12,7 @@ import { Unlocks } from './components/Unlocks';
 import { AuthScreen } from './components/AuthScreen';
 import { UpgradeModal } from './components/UpgradeModal';
 import { PrivacyModal } from './components/PrivacyModal';
+import { OnboardingCard } from './components/OnboardingCard';
 import { unseenDone } from './selectors';
 
 export default function App() {
@@ -172,6 +173,7 @@ export default function App() {
             </button>
           </div>
         )}
+        <OnboardingCard />
         {store.cosmeticsOff ? <ListView /> : <Office />}
       </main>
 
