@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api, ApiError } from '../api';
 import { ding } from '../audio';
 import { Sprite } from '../pixel/Sprite';
-import { character, desk } from '../pixel/sprites';
+import { character, desk, PLANT, SHELF, LAMP } from '../pixel/sprites';
 import { Modal, ModalHeader } from './Modal';
 import { FieldInput } from './AgentModal';
 import { Markdown } from './Markdown';
@@ -174,14 +174,20 @@ export function DemoExperience({ token }: { token: string }) {
 
         {/* the stage */}
         <div ref={containerRef} className="mx-auto w-full max-w-[760px]" style={{ height: STAGE_H * scale }}>
-          <div className="relative" style={{ width: STAGE_W, height: STAGE_H, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
-            <div className="office-wall absolute inset-x-0 top-0 h-[72px] rounded-t-xl" />
-            <div className="office-floor absolute inset-x-0 top-[72px] bottom-0 rounded-b-xl" />
-            <div className="absolute left-[90px] top-[12px] h-[44px] w-[64px] rounded-sm border-4 border-[#7a5a38] bg-gradient-to-b from-[#aee0f7] to-[#d8f0fb]" />
-            <div className="absolute right-[90px] top-[12px] h-[44px] w-[64px] rounded-sm border-4 border-[#7a5a38] bg-gradient-to-b from-[#aee0f7] to-[#d8f0fb]" />
-            <div className="font-pixel absolute left-1/2 top-[24px] -translate-x-1/2 whitespace-nowrap text-[10px] text-[#5d4326]">
+          <div className="office-stage relative overflow-hidden rounded-xl" style={{ width: STAGE_W, height: STAGE_H, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
+            <div className="office-wall absolute inset-x-0 top-0 h-[96px]" />
+            <div className="office-floor absolute inset-x-0 top-[96px] bottom-0" />
+            <div className="office-window absolute left-[100px] top-[20px] h-[58px] w-[140px]">
+              <span className="office-window-bar" />
+            </div>
+            <div className="font-pixel absolute left-1/2 top-[34px] -translate-x-1/2 whitespace-nowrap text-[11px] text-[#5d4326]">
               ★ {(prospect.company || 'HQ').toUpperCase().slice(0, 18)} ★
             </div>
+            {/* decor */}
+            <div className="absolute left-[612px] top-[8px]"><Sprite def={SHELF} scale={5} /></div>
+            <div className="absolute left-[18px] top-[300px] drop-shadow-[0_8px_6px_rgba(0,0,0,0.25)]"><Sprite def={LAMP} scale={5} /></div>
+            <div className="office-lampglow absolute left-[4px] top-[150px] h-[240px] w-[240px]" />
+            <div className="absolute left-[648px] top-[330px] drop-shadow-[0_10px_8px_rgba(0,0,0,0.25)]"><Sprite def={PLANT} scale={6} /></div>
 
             {agents.slice(0, 3).map((agent, i) => (
               <DemoAgentDesk
@@ -207,8 +213,8 @@ export function DemoExperience({ token }: { token: string }) {
               <div className={phase === 'free' ? 'animate-[bob_1.8s_ease-in-out_infinite]' : ''}>
                 <Sprite def={character('ceo', walking ? walkFrame : 0)} scale={4} />
               </div>
-              <div className="-ml-[24px] mt-1 w-[96px] text-center">
-                <div className="inline-block rounded bg-[#00000055] px-1.5 py-0.5 text-[11px] font-semibold text-white">Chief of Staff</div>
+              <div className="-ml-[16px] mt-1 w-[96px] text-center">
+                <div className="inline-block rounded bg-[#00000066] px-1.5 py-0.5 text-[11px] font-semibold text-white">Chief of Staff</div>
               </div>
             </div>
 
@@ -231,6 +237,8 @@ export function DemoExperience({ token }: { token: string }) {
                 </div>
               </div>
             )}
+
+            <div className="office-vignette pointer-events-none absolute inset-0" />
           </div>
         </div>
 
@@ -333,27 +341,27 @@ function DemoAgentDesk({
   return (
     <button
       onClick={onClick}
-      className={`absolute w-[48px] text-left transition ${clickable ? 'cursor-pointer hover:brightness-110' : 'cursor-default'}`}
-      style={{ left: slot.x, top: slot.y }}
+      className={`absolute text-left transition ${clickable ? 'cursor-pointer hover:brightness-105' : 'cursor-default'}`}
+      style={{ left: slot.x, top: slot.y - 40, width: 144 }}
     >
-      {highlight && (
-        <div className="absolute -inset-x-[30px] -inset-y-[14px] animate-pulse rounded-2xl border-4 border-amber-400" />
-      )}
-      {active && (
-        <div className="absolute -top-7 left-[24px] z-10 -translate-x-1/2 animate-pulse rounded-md border-2 border-[#5d4326] bg-white px-1 text-sm">
-          💭
+      {highlight && <div className="absolute -inset-x-2 -inset-y-2 top-[20px] animate-pulse rounded-2xl border-4 border-amber-400" />}
+      <div className="absolute left-[14px] top-[164px] h-[18px] w-[116px] rounded-[50%] bg-black/25 blur-[2px]" />
+
+      <div className="absolute" style={{ left: 40, top: 0 }}>
+        {active && (
+          <div className="absolute -top-6 left-[32px] z-10 -translate-x-1/2 animate-pulse rounded-md border-2 border-[#5d4326] bg-white px-1 text-sm">💭</div>
+        )}
+        <div className={active ? '' : 'animate-[bob_2.2s_ease-in-out_infinite]'}>
+          <Sprite def={character(agent.avatar, active ? frame : 0)} scale={4} />
         </div>
-      )}
-      <div className={active ? '' : 'animate-[bob_1.8s_ease-in-out_infinite]'}>
-        <Sprite def={character(agent.avatar, active ? frame : 0)} scale={4} />
       </div>
-      <div className="-mt-[24px] -ml-[24px]">
+      <div className="absolute" style={{ left: 0, top: 40 }}>
         <Sprite def={desk(!!active)} scale={4} />
       </div>
-      <div className="-ml-[24px] mt-1 w-[96px] text-center">
-        <div className="inline-block rounded bg-[#00000055] px-1.5 py-0.5 text-[11px] font-semibold text-white">{agent.displayName}</div>
+      <div className="absolute left-0 top-[150px] w-full text-center">
+        <div className="inline-block rounded bg-[#00000066] px-2 py-0.5 text-[12px] font-semibold text-white">{agent.displayName}</div>
         {active && (
-          <div className="mx-auto mt-1 h-1.5 w-[80px] overflow-hidden rounded bg-[#00000040]">
+          <div className="mx-auto mt-1 h-1.5 w-[96px] overflow-hidden rounded bg-[#00000040]">
             <div className="h-full bg-[#7fd4ff] transition-all" style={{ width: `${progressPct(active, state.now)}%` }} />
           </div>
         )}
