@@ -1,0 +1,12 @@
+{
+  "name": "Pocket Agents",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
+  "postCreateCommand": "cd pocket-agents && npm install && npm run build",
+  "forwardPorts": [3001],
+  "portsAttributes": {
+    "3001": {
+      "label": "Pocket Agents app",
+      "onAutoForward": "openPreview"
+    }
+  }
+}
