@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store';
 import { Sprite } from '../pixel/Sprite';
-import { character, desk, PLANT, SUCCULENT, COFFEE, DOG, SHELF, LAMP } from '../pixel/sprites';
+import { character, desk, CHAIR, PLANT, SUCCULENT, COFFEE, DOG, SHELF, LAMP } from '../pixel/sprites';
 import { activeTaskFor, unseenDone, hasCosmetic, progressPct } from '../selectors';
 import type { Agent, ServerState } from '../types';
 
@@ -11,16 +11,17 @@ const STAGE_H = 520;
 // Three worker desks in a row, the CEO up by the window. Server assigns
 // deskSlot 0-2 to workers and 3 to the CEO. Each entry is the desk's anchor.
 const SLOTS = [
-  { x: 70, y: 250, hire: 'a worker' },
+  { x: 60, y: 250, hire: 'a worker' },
   { x: 320, y: 250, hire: 'a worker' },
-  { x: 570, y: 250, hire: 'a worker' },
+  { x: 580, y: 250, hire: 'a worker' },
   { x: 320, y: 86, hire: 'the Chief of Staff' },
 ];
 
-// Sprite footprints at scale 4 (px).
-const DESK_W = 144;
-const CHAR_DX = 40; // centers the 64px-wide character on the 144px desk
-const CHAR_DY = -40; // raise so head/shoulders clear the monitor
+// Sprite footprints at scale 4 (px). The seated character sits in the chair;
+// the deep desk (184px) is drawn in front, hiding the lower body.
+const DESK_W = 184;
+const CHAIR_DX = 52, CHAIR_DY = -10; // chair behind, offset from the desk anchor
+const CHAR_DX = 60, CHAR_DY = -24; // seated character, centered behind the desk top
 
 export function Office() {
   const state = useStore((s) => s.state)!;
@@ -107,11 +108,18 @@ export function Office() {
               key={`ghost-${slotIndex}`}
               onClick={() => setStore({ hireOpen: true })}
               className="group absolute opacity-45 transition hover:opacity-90"
-              style={{ left: slot.x, top: slot.y, width: DESK_W }}
+              style={{ left: slot.x, top: slot.y, width: DESK_W, height: 200 }}
               title={`Hire ${slot.hire}`}
             >
-              <Sprite def={desk(false)} scale={4} />
-              <div className="font-pixel mt-1 text-center text-[9px] text-[#5d4326] group-hover:text-[#2f2008]">+ HIRE</div>
+              <div className="absolute" style={{ left: CHAIR_DX, top: CHAIR_DY }}>
+                <Sprite def={CHAIR} scale={4} />
+              </div>
+              <div className="absolute left-0 top-0">
+                <Sprite def={desk(false)} scale={4} />
+              </div>
+              <div className="font-pixel absolute left-0 top-[166px] w-full text-center text-[9px] text-[#5d4326] group-hover:text-[#2f2008]">
+                + HIRE {slot.hire === 'the Chief of Staff' ? 'CHIEF' : ''}
+              </div>
             </button>
           );
         })}
@@ -134,16 +142,18 @@ function AgentAtDesk({ agent, slot, frame, state }: { agent: Agent; slot: { x: n
     <button
       onClick={() => setStore({ agentModalId: agent.id })}
       className="absolute text-left transition hover:brightness-105"
-      style={{ left: slot.x, top: slot.y + CHAR_DY, width: DESK_W }}
+      style={{ left: slot.x, top: slot.y, width: DESK_W, height: 210 }}
     >
-      {/* soft ground shadow */}
-      <div className="absolute left-[14px] top-[164px] h-[18px] w-[116px] rounded-[50%] bg-black/25 blur-[2px]" />
+      {/* soft ground shadow under the desk */}
+      <div className="absolute left-[8px] top-[150px] h-[22px] w-[200px] rounded-[50%] bg-black/25 blur-[3px]" />
 
-      {/* character behind */}
-      <div
-        className="absolute"
-        style={{ left: CHAR_DX, top: 0 }}
-      >
+      {/* chair behind the character */}
+      <div className="absolute" style={{ left: CHAIR_DX, top: CHAIR_DY }}>
+        <Sprite def={CHAIR} scale={4} />
+      </div>
+
+      {/* seated character */}
+      <div className="absolute" style={{ left: CHAR_DX, top: CHAR_DY }}>
         {bubble && (
           <div
             className={`absolute -top-6 left-[32px] z-10 -translate-x-1/2 rounded-md border-2 border-[#5d4326] bg-white px-1 text-sm ${
@@ -153,18 +163,18 @@ function AgentAtDesk({ agent, slot, frame, state }: { agent: Agent; slot: { x: n
             {bubble}
           </div>
         )}
-        <div className={working ? '' : 'animate-[bob_2.2s_ease-in-out_infinite]'}>
+        <div className={working ? '' : 'animate-[bob_2.6s_ease-in-out_infinite]'}>
           <Sprite def={character(agent.avatar, working ? frame : 0)} scale={4} />
         </div>
       </div>
 
-      {/* desk in front */}
-      <div className="absolute" style={{ left: 0, top: -CHAR_DY }}>
+      {/* deep desk in front */}
+      <div className="absolute left-0 top-0">
         <Sprite def={desk(working)} scale={4} />
       </div>
 
       {/* nameplate + progress */}
-      <div className="absolute left-0 top-[150px] w-full text-center">
+      <div className="absolute left-0 top-[166px] w-full text-center">
         <div className="inline-block rounded bg-[#00000066] px-2 py-0.5 text-[12px] font-semibold text-white">
           {agent.displayName} <span className="text-[#ffd76b]">Lv{agent.level}</span>
         </div>

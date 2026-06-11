@@ -48,14 +48,6 @@ const TORSO_TYPE = [
   '..OBBBBBBBBBBO..',
   '..OOOBBBBBBOOO..',
 ];
-const LEGS = [
-  '....OPPPPPPO....',
-  '....OPppppPO....',
-  '....OPP..PPO....',
-  '....OPP..PPO....',
-  '...OKKKO.OKKKO..',
-];
-
 type Look = {
   H: string; h: string; B: string; b: string; c: string; P: string; p: string;
   glasses?: boolean; headset?: boolean; tie?: boolean; suit?: boolean;
@@ -67,10 +59,34 @@ const ROLE_LOOKS: Record<string, Look> = {
   ceo:        { H: '#9aa0a6', h: '#bcc0c4', B: '#34343e', b: '#28282f', c: '#b23a3a', P: '#2c2c34', p: '#212127', suit: true },
 };
 
-export function character(role: string, frame: 0 | 1 = 0): SpriteDef {
+// Walk cycle legs — used only by standing(), for the greeter who walks in.
+const LEGS_A = [
+  '....OPPPPPPO....',
+  '....OPppppPO....',
+  '....OPP..PPO....',
+  '....OPP..PPO....',
+  '...OKKKO.OKKKO..',
+];
+const LEGS_B = [
+  '....OPPPPPPO....',
+  '....OPppppPO....',
+  '....OPP..PPO....',
+  '...OPP....PPO...',
+  '..OKKKO..OKKKO..',
+];
+
+// Standing, with legs and a two-frame walk — for the demo greeter who walks
+// across the office to welcome the prospect. (Desks use the seated character.)
+export function standing(role: string, frame: 0 | 1 = 0): SpriteDef {
   const r = ROLE_LOOKS[role] ?? ROLE_LOOKS.sales;
-  const rows = [...HEAD, COLLAR, ...(frame ? TORSO_TYPE : TORSO_IDLE), ...LEGS];
-  const grid = rows.map((row, y) => {
+  const rows = [...HEAD, COLLAR, ...(frame ? TORSO_TYPE : TORSO_IDLE), ...(frame ? LEGS_B : LEGS_A)];
+  const grid = applyLook(rows, r);
+  return { grid, palette: facePalette(r) };
+}
+
+// Overlay role accessories (glasses, headset, tie, suit) onto a head+torso.
+function applyLook(rows: string[], r: Look): string[] {
+  return rows.map((row, y) => {
     let s = row;
     if (r.glasses && y === 7) s = '..OSSGSSSSGSSO..';
     if (r.headset && (y === 6 || y === 7)) s = '..A' + s.slice(3, 13) + 'A..';
@@ -81,54 +97,128 @@ export function character(role: string, frame: 0 | 1 = 0): SpriteDef {
     if (r.suit && y >= 15 && y <= 17) s = s.slice(0, 7) + 'cc' + s.slice(9);
     return s;
   });
+}
+const facePalette = (r: Look): Record<string, string> => ({
+  O: OUTLINE, H: r.H, h: r.h, S: '#f1c9a4', d: '#d6a079', E: '#3a2a1c', R: '#caa07c',
+  o: '#c9926c', B: r.B, b: r.b, c: r.c, W: '#eef0f2', P: r.P, p: r.p,
+  K: '#2f2218', G: '#46505a', A: '#34343b',
+});
+
+// Seated at a desk (no legs — the desk covers the lower body), matching a
+// real office. Used both at desks and, small, as the modal/avatar bust.
+export function character(role: string, frame: 0 | 1 = 0): SpriteDef {
+  const r = ROLE_LOOKS[role] ?? ROLE_LOOKS.sales;
+  const rows = [...HEAD, COLLAR, ...(frame ? TORSO_TYPE : TORSO_IDLE)];
+  return { grid: applyLook(rows, r), palette: facePalette(r) };
+}
+
+// --- desk: deep wood desk built programmatically (46x40) with an iMac, a
+// keyboard/mouse, a mug, a notepad+pen, and a side drawer unit. The screen
+// lights up cyan while the agent is working; the seated character sits behind.
+export function desk(working: boolean): SpriteDef {
+  const W = 46, H = 40;
+  const g: string[][] = Array.from({ length: H }, () => Array(W).fill('.'));
+  const put = (y: number, x: number, s: string) => { for (let i = 0; i < s.length; i++) if (s[i] !== ' ') g[y][x + i] = s[i]; };
+  const fill = (y0: number, y1: number, x0: number, x1: number, ch: string) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) g[y][x] = ch; };
+
+  // iMac monitor
+  const scr = (working ? 'S' : 's').repeat(14);
+  put(1, 3, 'oMMMMMMMMMMMMMMMMo');
+  for (let y = 2; y <= 8; y++) put(y, 3, 'oM' + scr + 'Mo');
+  put(9, 3, 'oMmmmmmmmmmmmmmMo');
+  put(10, 3, 'ooMMMMMMMMMMMMMMoo');
+  put(11, 10, 'oNNo'); put(12, 9, 'oNNNNo'); put(13, 8, 'oNNNNNNo');
+
+  // desk top
+  put(14, 0, 'o' + 'e'.repeat(44) + 'o');
+  for (let y = 15; y <= 23; y++) put(y, 0, 'o' + 'w'.repeat(44) + 'o');
+  put(24, 0, 'o' + 't'.repeat(44) + 'o');
+  for (const [y, x] of [[16, 8], [19, 14], [21, 6], [17, 33], [22, 39], [20, 25]]) put(y, x, 'gg');
+  put(14, 7, 'NNNNNNNNNNNN');
+  // keyboard + mouse
+  put(17, 24, 'oooooooooooooo'); put(18, 24, 'okKkKkKkKkKkKo'); put(19, 24, 'oooooooooooooo');
+  put(18, 40, 'PP'); put(19, 40, 'PP');
+  // mug
+  put(15, 40, 'oUUo'); put(16, 40, 'oUUoo'); put(17, 40, 'ouUo');
+  // notepad + pen
+  put(21, 25, 'ooooooo'); put(22, 25, 'oPPPPPo'); put(23, 25, 'ooooooo'); put(22, 34, 'pppp');
+
+  // front face + drawer unit
+  for (let y = 25; y <= 34; y++) put(y, 0, 'o' + 'v'.repeat(44) + 'o');
+  put(25, 1, 'e'.repeat(44));
+  fill(25, 25, 28, 44, 'o');
+  for (let y = 26; y <= 37; y++) { g[y][28] = 'o'; g[y][44] = 'o'; }
+  fill(26, 30, 29, 43, 'D'); put(28, 35, 'dd');
+  fill(31, 31, 29, 43, 'o'); fill(32, 36, 29, 43, 'D'); put(34, 35, 'dd');
+  fill(37, 37, 29, 43, 'o'); put(38, 29, 'oo'); put(38, 42, 'oo');
+  for (let y = 35; y <= 38; y++) put(y, 4, 'ovvo'); put(38, 4, 'oooo');
+
   return {
-    grid,
+    grid: g.map((r) => r.join('')),
     palette: {
-      O: OUTLINE, H: r.H, h: r.h, S: '#f1c9a4', d: '#d6a079', E: '#3a2a1c', R: '#caa07c',
-      o: '#c9926c', B: r.B, b: r.b, c: r.c, W: '#eef0f2', P: r.P, p: r.p,
-      K: '#2f2218', G: '#46505a', A: '#34343b',
+      o: OUTLINE, M: '#cfd3d8', m: '#9aa0a8', s: '#3a4a52', S: '#8fe3ff', N: '#b9bdc4',
+      e: '#d8ab72', w: '#c49058', t: '#a87a48', g: '#b08350',
+      v: '#8a5f38', D: '#9a6b40', d: '#3a2c20',
+      K: '#c9ccd1', k: '#7e8189', U: '#d7693f', u: '#b4502c', P: '#eef0f2', p: '#3f6fa8',
     },
   };
 }
 
-// --- desk: wood table with an iMac-style monitor, keyboard, mug, drawer ------
-// The screen lights up cyan while the agent is working.
-export function desk(working: boolean): SpriteDef {
-  const sc = working ? 'S' : 's';
-  return {
-    grid: [
-      '..............oooooooo..............',
-      '............ooMMMMMMMMoo............',
-      '...........oM' + sc.repeat(8) + 'Mo...........',
-      '...........oM' + sc.repeat(8) + 'Mo...........',
-      '...........oM' + sc.repeat(8) + 'Mo...........',
-      '...........oM' + sc.repeat(8) + 'Mo...........',
-      '...........oMmmmmmmmMo...........',
-      '............ooMMMMoo............',
-      '..............oNNo..............',
-      '.............oNNNNo.............',
-      '............ooooooooo...........',
-      '......oo...PPPP....UU...oo......',
-      '....ooKKKKKKKKKo..oUUUo..oo.....',
-      '...oKkKkKkKkKkKo..oUUUo.oPPo....',
-      '..owwwwwwwwwwwwwwwwwwwwwwwwwwo..',
-      '.oweeeeeeeeeeeeeeeeeeeeeeeeeewo.',
-      '.ovvvvvvvvvvvvvvvvvvvvvvvvvvvvo.',
-      '.ovvggvvvvvvggvvvvvvvvggvvvvvvo.',
-      '.ovvvvvvvvvvvvvvvvvvDDvvvvvvvvo.',
-      '.ovvvvvvvvvvvvvvvvvvDDvvvvvvvvo.',
-      '.ovvvvvvvvvvvvvvvvvvvvvvvvvvvvo.',
-      '.oovvvvvvoovvvvvvvvoovvvvvvvoo.',
-      '..oo....oo........oo......oo...',
-      '..........................oo..',
-    ],
-    palette: {
-      o: OUTLINE, M: '#cfd3d8', m: '#9aa0a8', s: '#3a4a52', S: '#8fe3ff',
-      N: '#b9bdc4', w: '#b07f4e', e: '#caa06a', v: '#8a5f38', g: '#7a5230',
-      K: '#c9ccd1', k: '#7e8189', U: '#d7693f', u: '#b4502c', P: '#eef0f2', D: '#3a2c20',
-    },
-  };
-}
+// Office chair — drawn behind the seated character.
+export const CHAIR: SpriteDef = {
+  grid: [
+    '..oooooooooooooooo..',
+    '.oCCccccccccccccCCo.',
+    '.oCCCCCCCCCCCCCCCCo.',
+    '.oCCCCCCCCCCCCCCCCo.',
+    '.oCCCCCCCCCCCCCCCCo.',
+    '.oCCCCCCCCCCCCCCCCo.',
+    '.oCCCCCCCCCCCCCCCCo.',
+    'ooCCCCCCCCCCCCCCCCoo',
+    'oCCoCCCCCCCCCCCCoCCo',
+    'oCCoCCCCCCCCCCCCoCCo',
+    'ooooCCCCCCCCCCCCoooo',
+    '...oCCCCCCCCCCCCo...',
+  ],
+  palette: { o: OUTLINE, C: '#41444b', c: '#5a5e66' },
+};
+
+// Accent armchair (cozy decor).
+export const ARMCHAIR: SpriteDef = {
+  grid: [
+    '...oooooooooooo...',
+    '..oAAaaaaaaaaAAo..',
+    '..oAAAAAAAAAAAAo..',
+    '..oAAAAAAAAAAAAo..',
+    '..oAAAAAAAAAAAAo..',
+    '.ooAAAAAAAAAAAAoo.',
+    'oAAooaaaaaaaaooAAo',
+    'oAAoAAAAAAAAAAoAAo',
+    'oAAoAAAAAAAAAAoAAo',
+    'oAAooooooooooooAAo',
+    'oAAAAAAAAAAAAAAAAo',
+    '.oooooooooooooooo.',
+    '..oKKo........oKKo',
+  ],
+  palette: { o: OUTLINE, A: '#c98a3e', a: '#e0a655', K: '#5a3d24' },
+};
+
+// Cozy area rug.
+export const RUG: SpriteDef = {
+  grid: [
+    'oRRRRRRRRRRRRRRRRo',
+    'oRppppppppppppppRo',
+    'oRpAAAAAAAAAAAApRo',
+    'oRpAaaaaaaaaaAApRo',
+    'oRpAaAAAAAAAaAApRo',
+    'oRpAaAAAAAAAaAApRo',
+    'oRpAaaaaaaaaaAApRo',
+    'oRpAAAAAAAAAAAApRo',
+    'oRppppppppppppppRo',
+    'oRRRRRRRRRRRRRRRRo',
+  ],
+  palette: { o: '#7a3f3f', R: '#a85a5a', p: '#c47b6b', A: '#b86a55', a: '#cf9270' },
+};
 
 // --- props -----------------------------------------------------------------
 // Big leafy monstera in a terracotta pot (the cozy corner plant).

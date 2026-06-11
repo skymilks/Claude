@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api, ApiError } from '../api';
 import { ding } from '../audio';
 import { Sprite } from '../pixel/Sprite';
-import { character, desk, PLANT, SHELF, LAMP } from '../pixel/sprites';
+import { character, standing, desk, CHAIR, PLANT, SHELF, LAMP } from '../pixel/sprites';
 import { Modal, ModalHeader } from './Modal';
 import { FieldInput } from './AgentModal';
 import { Markdown } from './Markdown';
@@ -17,15 +17,17 @@ import type { DemoState, Agent, Task } from '../types';
 const STAGE_W = 740;
 const STAGE_H = 500;
 const DESKS = [
-  { x: 100, y: 250 },
-  { x: 330, y: 250 },
-  { x: 560, y: 250 },
+  { x: 40, y: 250 },
+  { x: 300, y: 250 },
+  { x: 540, y: 250 },
 ];
+const CHAIR_DX = 52, CHAIR_DY = -10;
+const CHAR_DX = 60, CHAR_DY = -24;
 // The greeter's marks: off-stage left → front-and-center → home by the window.
 const GREETER = {
-  offstage: { x: -70, y: 360 },
-  center: { x: 330, y: 350 },
-  home: { x: 336, y: 100 },
+  offstage: { x: -70, y: 330 },
+  center: { x: 330, y: 320 },
+  home: { x: 470, y: 150 },
 };
 
 type Phase = 'enter' | 'welcome' | number /* tour step = agent index */ | 'free';
@@ -211,7 +213,7 @@ export function DemoExperience({ token }: { token: string }) {
               }}
             >
               <div className={phase === 'free' ? 'animate-[bob_1.8s_ease-in-out_infinite]' : ''}>
-                <Sprite def={character('ceo', walking ? walkFrame : 0)} scale={4} />
+                <Sprite def={standing('ceo', walking ? walkFrame : 0)} scale={4} />
               </div>
               <div className="-ml-[16px] mt-1 w-[96px] text-center">
                 <div className="inline-block rounded bg-[#00000066] px-1.5 py-0.5 text-[11px] font-semibold text-white">Chief of Staff</div>
@@ -342,23 +344,26 @@ function DemoAgentDesk({
     <button
       onClick={onClick}
       className={`absolute text-left transition ${clickable ? 'cursor-pointer hover:brightness-105' : 'cursor-default'}`}
-      style={{ left: slot.x, top: slot.y - 40, width: 144 }}
+      style={{ left: slot.x, top: slot.y, width: 184, height: 210 }}
     >
-      {highlight && <div className="absolute -inset-x-2 -inset-y-2 top-[20px] animate-pulse rounded-2xl border-4 border-amber-400" />}
-      <div className="absolute left-[14px] top-[164px] h-[18px] w-[116px] rounded-[50%] bg-black/25 blur-[2px]" />
+      {highlight && <div className="absolute inset-x-0 top-[-20px] h-[200px] animate-pulse rounded-2xl border-4 border-amber-400" />}
+      <div className="absolute left-[8px] top-[150px] h-[22px] w-[200px] rounded-[50%] bg-black/25 blur-[3px]" />
 
-      <div className="absolute" style={{ left: 40, top: 0 }}>
+      <div className="absolute" style={{ left: CHAIR_DX, top: CHAIR_DY }}>
+        <Sprite def={CHAIR} scale={4} />
+      </div>
+      <div className="absolute" style={{ left: CHAR_DX, top: CHAR_DY }}>
         {active && (
           <div className="absolute -top-6 left-[32px] z-10 -translate-x-1/2 animate-pulse rounded-md border-2 border-[#5d4326] bg-white px-1 text-sm">💭</div>
         )}
-        <div className={active ? '' : 'animate-[bob_2.2s_ease-in-out_infinite]'}>
+        <div className={active ? '' : 'animate-[bob_2.6s_ease-in-out_infinite]'}>
           <Sprite def={character(agent.avatar, active ? frame : 0)} scale={4} />
         </div>
       </div>
-      <div className="absolute" style={{ left: 0, top: 40 }}>
+      <div className="absolute left-0 top-0">
         <Sprite def={desk(!!active)} scale={4} />
       </div>
-      <div className="absolute left-0 top-[150px] w-full text-center">
+      <div className="absolute left-0 top-[166px] w-full text-center">
         <div className="inline-block rounded bg-[#00000066] px-2 py-0.5 text-[12px] font-semibold text-white">{agent.displayName}</div>
         {active && (
           <div className="mx-auto mt-1 h-1.5 w-[96px] overflow-hidden rounded bg-[#00000040]">
