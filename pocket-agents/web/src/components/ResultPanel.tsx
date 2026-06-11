@@ -86,14 +86,19 @@ export function ResultPanel() {
             </button>
           </>
         )}
-        {task.kind !== 'boardroom' && (
-          <button
-            onClick={() => act('rerun')}
-            className="rounded-lg border border-stone-300 px-4 py-2 text-sm font-semibold text-stone-700 hover:bg-stone-50"
-          >
-            Re-run
-          </button>
-        )}
+        {task.kind !== 'boardroom' &&
+          (task.input ? (
+            <button
+              onClick={() => act('rerun')}
+              className="rounded-lg border border-stone-300 px-4 py-2 text-sm font-semibold text-stone-700 hover:bg-stone-50"
+            >
+              Re-run
+            </button>
+          ) : (
+            <span className="px-1 text-xs text-stone-400" title="Raw inputs are auto-purged ~24h after a task finishes">
+              input purged 🔒
+            </span>
+          ))}
         {task.status === 'done' && (
           <span className="ml-2 flex items-center gap-1">
             {[1, 2, 3, 4, 5].map((star) => (

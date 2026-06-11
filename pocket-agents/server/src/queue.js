@@ -8,11 +8,20 @@ import { runModel, friendlyApiError, demoMode } from './claude.js';
 import { CEO_SYSTEM, recentWorkBlock, ceoUserContent, boardroomUserContent } from './synthesis.js';
 import { addXp, evaluateUnlocks, hasUnlock, XP } from './progression.js';
 import { ensurePeriod } from './plans.js';
+import { sweepExpiredSessions } from './auth.js';
 
 const CONCURRENCY = 2;
 const TICK_MS = 1500;
 const BOARDROOM_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
+const SWEEP_EVERY_MS = 10 * 60 * 1000;
+// Retention: keep as little as possible. Raw inputs are purged shortly after
+// the work is done (re-run stops being offered); finished outputs the user
+// never acted on age out too. Acted-on outputs and boardroom reports stay
+// until the user deletes them.
+const INPUT_RETENTION_HOURS = Number(process.env.INPUT_RETENTION_HOURS || 24);
+const UNSAVED_OUTPUT_RETENTION_DAYS = Number(process.env.UNSAVED_OUTPUT_RETENTION_DAYS || 30);
 let active = 0;
+let lastSweep = 0;
 
 export function startWorker() {
   // Recover tasks stranded in 'running' by a previous server crash/restart.
@@ -20,7 +29,27 @@ export function startWorker() {
   setInterval(tick, TICK_MS);
 }
 
+export function privacySweep() {
+  const inputCutoff = new Date(Date.now() - INPUT_RETENTION_HOURS * 3600 * 1000).toISOString();
+  db.prepare(
+    `UPDATE tasks SET input = NULL
+     WHERE input IS NOT NULL AND status IN ('done','failed') AND finishedAt < ?`
+  ).run(inputCutoff);
+
+  const outputCutoff = new Date(Date.now() - UNSAVED_OUTPUT_RETENTION_DAYS * 24 * 3600 * 1000).toISOString();
+  db.prepare(
+    `DELETE FROM tasks
+     WHERE status IN ('done','failed') AND actedAt IS NULL AND kind != 'boardroom' AND finishedAt < ?`
+  ).run(outputCutoff);
+
+  sweepExpiredSessions();
+}
+
 function tick() {
+  if (Date.now() - lastSweep > SWEEP_EVERY_MS) {
+    lastSweep = Date.now();
+    privacySweep();
+  }
   autoQueueBoardroom();
   while (active < CONCURRENCY) {
     const task = claimNext();
