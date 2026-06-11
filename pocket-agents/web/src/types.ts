@@ -24,6 +24,7 @@ export type Agent = {
   displayName: string;
   role: string;
   avatar: string;
+  tagline: string | null;
   inputSchema: Field[];
   outputFormat: string;
   modelTier: 'standard' | 'premium';
@@ -100,6 +101,50 @@ export type ServerState = {
   company: { xp: number; level: number; nextLevelXp: number | null };
   boardroom: BoardroomStatus;
   models: { standard: string; premium: string };
+  demoMode: boolean;
+  isAdmin: boolean;
+  now: string;
+};
+
+// --- Prospect demo offices (the founder's done-for-you closing tool) ---
+
+export type DraftAgent = {
+  displayName: string;
+  role: string;
+  avatar: string;
+  tagline: string;
+  systemPrompt: string;
+  inputSchema: Field[];
+};
+
+export type ProspectDraft = {
+  brief: string;
+  welcomeLine: string;
+  agents: DraftAgent[];
+};
+
+export type ProspectListItem = {
+  id: string;
+  name: string;
+  company: string;
+  url: string;
+  runsUsed: number;
+  runCap: number;
+  createdAt: string;
+};
+
+export type DemoState = {
+  prospect: {
+    name: string;
+    company: string;
+    brief: string | null;
+    welcomeLine: string | null;
+    ctaUrl: string | null;
+  };
+  agents: Agent[];
+  tasks: Task[];
+  demoRunsUsed: number;
+  demoRunCap: number;
   demoMode: boolean;
   now: string;
 };

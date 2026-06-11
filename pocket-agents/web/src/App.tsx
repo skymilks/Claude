@@ -13,17 +13,26 @@ import { AuthScreen } from './components/AuthScreen';
 import { UpgradeModal } from './components/UpgradeModal';
 import { PrivacyModal } from './components/PrivacyModal';
 import { OnboardingCard } from './components/OnboardingCard';
+import { DemoExperience } from './components/DemoExperience';
+import { ProspectsPanel } from './components/ProspectsPanel';
 import { unseenDone } from './selectors';
+
+// Prospect demo links (/demo/<token>) get their own no-login experience.
+const demoToken = location.pathname.match(/^\/demo\/([A-Za-z0-9_-]+)\/?$/)?.[1] ?? null;
 
 export default function App() {
   const store = useStore();
   const { state, authed } = store;
   const [unlocksOpen, setUnlocksOpen] = useState(false);
+  const [prospectsOpen, setProspectsOpen] = useState(false);
 
   useEffect(() => {
+    if (demoToken) return; // the demo page never touches account state
     store.init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  if (demoToken) return <DemoExperience token={demoToken} />;
 
   if (authed === null) {
     return (
@@ -96,6 +105,11 @@ export default function App() {
           <span className="flex-1" />
 
           <nav className="relative flex items-center gap-1.5">
+            {state.isAdmin && (
+              <HeaderButton onClick={() => setProspectsOpen(true)} title="Build a personalized demo office for a prospect">
+                🏗️ Prospects
+              </HeaderButton>
+            )}
             <HeaderButton onClick={() => store.set({ hireOpen: true })}>🤝 Hire</HeaderButton>
             <HeaderButton onClick={() => store.set({ boardroomOpen: true })}>
               🏛️ Boardroom
@@ -184,6 +198,7 @@ export default function App() {
       {store.upgradeOpen && <UpgradeModal />}
       {store.privacyOpen && <PrivacyModal />}
       {unlocksOpen && <Unlocks onClose={() => setUnlocksOpen(false)} />}
+      {prospectsOpen && <ProspectsPanel onClose={() => setProspectsOpen(false)} />}
 
       {/* toasts */}
       <div className="fixed bottom-4 right-4 z-50 space-y-2">

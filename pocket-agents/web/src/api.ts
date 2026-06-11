@@ -1,4 +1,4 @@
-import type { ServerState, Task, Template, Agent } from './types';
+import type { ServerState, Task, Template, Agent, ProspectDraft, ProspectListItem, DemoState, DraftAgent } from './types';
 
 export class ApiError extends Error {
   status: number;
@@ -42,4 +42,17 @@ export const api = {
   deleteTask: (taskId: string) => request<{ ok: true }>(`/api/tasks/${taskId}`, { method: 'DELETE' }),
   convene: () => request<Task>('/api/boardroom/convene', { method: 'POST' }),
   wipeAccount: () => request<{ ok: true }>('/api/account', { method: 'DELETE' }),
+
+  // Founder tools: prospect demo offices.
+  draftProspect: (name: string, company: string, description: string) =>
+    request<ProspectDraft>('/api/admin/prospects/draft', { method: 'POST', body: JSON.stringify({ name, company, description }) }),
+  createProspect: (payload: { name: string; company: string; brief: string; welcomeLine: string; ctaUrl: string; agents: DraftAgent[] }) =>
+    request<{ id: string; token: string; url: string }>('/api/admin/prospects', { method: 'POST', body: JSON.stringify(payload) }),
+  listProspects: () => request<ProspectListItem[]>('/api/admin/prospects'),
+  deleteProspect: (id: string) => request<{ ok: true }>(`/api/admin/prospects/${id}`, { method: 'DELETE' }),
+
+  // Prospect-side demo experience (token link, no login).
+  demoState: (token: string) => request<DemoState>(`/api/demo/${token}`),
+  demoTry: (token: string, agentId: string, input: Record<string, string>) =>
+    request<Task>(`/api/demo/${token}/try`, { method: 'POST', body: JSON.stringify({ agentId, input }) }),
 };

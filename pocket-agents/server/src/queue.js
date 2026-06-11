@@ -175,7 +175,8 @@ export function queueBoardroom(ownerId, ceoAgentId) {
 // The scheduled ritual: once unlocked, a boardroom convenes weekly on the
 // server whenever there's enough fresh work — even with no tab open.
 function autoQueueBoardroom() {
-  for (const { id } of db.prepare(`SELECT id FROM users`).all()) {
+  // Prospect demo workspaces never convene boardrooms.
+  for (const { id } of db.prepare(`SELECT id FROM users WHERE COALESCE(kind, 'user') != 'demo'`).all()) {
     const status = boardroomStatus(id);
     if (status.canConvene && status.completedSinceLast >= 3) queueBoardroom(id, status.ceoAgentId);
   }

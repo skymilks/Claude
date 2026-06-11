@@ -55,6 +55,22 @@ export function requireAuth(req, res, next) {
   next();
 }
 
+// Founder mode: accounts whose email is listed in ADMIN_EMAILS (comma-
+// separated) can build prospect demo offices. Everyone else never sees it.
+const ADMIN_EMAILS = new Set(
+  (process.env.ADMIN_EMAILS ?? '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
+);
+
+export function isAdminUserId(userId) {
+  const user = db.prepare(`SELECT email FROM users WHERE id = ?`).get(userId);
+  return !!user?.email && ADMIN_EMAILS.has(user.email.toLowerCase());
+}
+
+export function requireAdmin(req, res, next) {
+  if (!isAdminUserId(req.userId)) return res.status(403).json({ error: 'Not available on this account' });
+  next();
+}
+
 // Light brute-force protection: in-memory failure counts per email.
 const failures = new Map();
 const lockedOut = (key) => {

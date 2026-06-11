@@ -105,7 +105,7 @@ export function AgentModal() {
   );
 }
 
-function FieldInput({ field, value, onChange }: { field: Field; value: string; onChange: (v: string) => void }) {
+export function FieldInput({ field, value, onChange }: { field: Field; value: string; onChange: (v: string) => void }) {
   const base = 'w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none';
   return (
     <label className="block">

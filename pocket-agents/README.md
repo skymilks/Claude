@@ -53,6 +53,28 @@ npm start          # http://localhost:3001
 - Getting-started checklist for new accounts; Escape closes modals; click-outside closes menus.
 - `Dockerfile` for a single-container deploy (see below).
 
+## Prospect demo offices (the done-for-you closing tool)
+
+The boutique pivot: before you've even met a prospect, build them a personalized
+office and send a link. They click it and land in **their** office — no signup —
+where the Chief of Staff walks up, greets them by name, and gives a first-day
+tour of a team drafted specifically for their business. They can put an agent to
+work for real (`DEMO_RUN_CAP` free runs, standard model) and then hit
+**Claim your office** — your booking link.
+
+How to use it:
+1. Set `ADMIN_EMAILS=you@example.com` on the server and sign in with that
+   account — a **🏗️ Prospects** button appears in the header.
+2. Enter the prospect's name, company, and a plain-English description of their
+   business. Claude (premium tier) drafts three tailored agents, a brief, and a
+   personal welcome line; without an API key a sensible templated draft is used.
+3. Tweak names/prompts if you like, click **Create demo link**, and send it.
+4. The panel lists every sent office with runs used; delete one to kill its link.
+
+Demo workspaces are isolated `users` rows (`kind='demo'`) reached only by an
+unguessable token — prospects never see system prompts, and demo runs are
+metered per office so you always know what a pitch cost.
+
 ## Models & cost
 
 | Tier | Used by | Default model | Override |
@@ -71,6 +93,8 @@ Token usage (`input + output`) is recorded per task (`tasks.modelUsed`, `tasks.t
 | `SECURE_COOKIES` | unset | Set `1` in HTTPS deployments |
 | `DATA_DIR` | `server/data` | SQLite location |
 | `PORT` | `3001` | Server port |
+| `ADMIN_EMAILS` | unset | Comma-separated founder emails — unlocks the Prospects builder |
+| `DEMO_RUN_CAP` | `3` | Free agent runs per prospect demo office |
 
 ## Deploy
 

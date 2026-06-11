@@ -88,5 +88,20 @@ function ensureColumn(table, column, ddl) {
 ensureColumn('users', 'passwordHash', 'passwordHash TEXT');
 ensureColumn('users', 'periodStart', 'periodStart TEXT');
 
+// Prospect demo workspaces (the "done-for-you" closing tool): a demo is a
+// users row with kind='demo' — no password, reached via an unguessable token
+// link, owning its own pre-built agents like any other workspace.
+ensureColumn('users', 'kind', `kind TEXT NOT NULL DEFAULT 'user'`);
+ensureColumn('users', 'demoToken', 'demoToken TEXT');
+ensureColumn('users', 'prospectName', 'prospectName TEXT');
+ensureColumn('users', 'prospectCompany', 'prospectCompany TEXT');
+ensureColumn('users', 'prospectBrief', 'prospectBrief TEXT');
+ensureColumn('users', 'welcomeLine', 'welcomeLine TEXT');
+ensureColumn('users', 'ctaUrl', 'ctaUrl TEXT');
+ensureColumn('users', 'demoRunsUsed', 'demoRunsUsed INTEGER NOT NULL DEFAULT 0');
+ensureColumn('users', 'createdBy', 'createdBy TEXT');
+// One-line role description shown in the hiring gallery / demo tour.
+ensureColumn('agents', 'tagline', 'tagline TEXT');
+
 export const uid = () => randomUUID();
 export const now = () => new Date().toISOString();
