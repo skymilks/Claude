@@ -9,14 +9,18 @@ export function OnboardingCard() {
   if (!state || dismissed) return null;
 
   const steps = [
-    { label: 'Hire your first agent', done: state.agents.length > 0, go: () => set({ hireOpen: true }) },
     {
-      label: 'Assign a task (paste real work!)',
+      label: 'Give an agent a task (your team is already seated)',
       done: state.tasks.length > 0,
       go: () => state.agents[0] && set({ agentModalId: state.agents[0].id }),
     },
     { label: 'Open the result when it lands in 📬', done: state.tasks.some((t) => t.seenAt) },
     { label: 'Act on it — copy, save, or rate it', done: state.tasks.some((t) => t.actedAt) },
+    {
+      label: 'Create your own agent at the empty desk',
+      done: state.agents.some((a) => a.templateId === 'custom'),
+      go: () => set({ builderOpen: true }),
+    },
     { label: 'Unlock the Boardroom (act on 5 outputs)', done: state.boardroom.unlocked, go: () => set({ boardroomOpen: true }) },
   ];
   const remaining = steps.filter((s) => !s.done).length;

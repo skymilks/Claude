@@ -1,18 +1,17 @@
 import { create } from 'zustand';
 import { api, ApiError } from './api';
 import { ding } from './audio';
-import type { ServerState, Template, Task } from './types';
+import type { ServerState, Task } from './types';
 
 type Toast = { id: number; icon: string; title: string; body?: string };
 
 type Store = {
   state: ServerState | null;
-  templates: Template[];
   toasts: Toast[];
   authed: boolean | null; // null = still checking the session
   cosmeticsOff: boolean;
   // ui
-  hireOpen: boolean;
+  builderOpen: boolean;
   agentModalId: string | null; // agent panel (assign / progress)
   resultTaskId: string | null;
   boardroomOpen: boolean;
@@ -38,11 +37,10 @@ let prevUnlockKeys: Set<string> | null = null;
 
 export const useStore = create<Store>((set, get) => ({
   state: null,
-  templates: [],
   toasts: [],
   authed: null,
   cosmeticsOff: localStorage.getItem('cosmeticsOff') === '1',
-  hireOpen: false,
+  builderOpen: false,
   agentModalId: null,
   resultTaskId: null,
   boardroomOpen: false,
@@ -59,7 +57,6 @@ export const useStore = create<Store>((set, get) => ({
   init: async () => {
     if (initialized) return;
     initialized = true;
-    api.templates().then((templates) => set({ templates })).catch(() => {});
     await get().afterAuth();
     setInterval(() => get().refresh(), 2500);
   },
@@ -86,7 +83,7 @@ export const useStore = create<Store>((set, get) => ({
       state: null,
       menuOpen: false,
       trayOpen: false,
-      hireOpen: false,
+      builderOpen: false,
       agentModalId: null,
       resultTaskId: null,
       boardroomOpen: false,

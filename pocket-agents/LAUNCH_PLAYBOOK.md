@@ -41,9 +41,11 @@ prospect office. That's where the demo's green buttons send them.
 
 For each prospect, in order:
 
-1. **Build their office** (5 min): Prospects panel → their name, company, and
-   2-3 sentences about their business — the more specific, the better the
-   agents. Review the draft, tweak names if you like, create the link.
+1. **Build their office** (5 min): Prospects panel → their name, company,
+   **their website**, and 2-3 sentences about their business. We read the
+   site, so the agents — and the ready-to-run ideas left on each desk —
+   reference their real services and city. Review the draft, tweak names if
+   you like, create the link.
 2. **Walk through it yourself once.** You're about to send it; make sure the
    welcome line lands and the agents make sense for them.
 3. **Send it personally.** Short message, no pitch deck:

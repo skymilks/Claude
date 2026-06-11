@@ -4,7 +4,7 @@ import { ding } from '../audio';
 import { Sprite } from '../pixel/Sprite';
 import { character, standing, desk, CHAIR, PLANT, SHELF, LAMP } from '../pixel/sprites';
 import { Modal, ModalHeader } from './Modal';
-import { FieldInput } from './AgentModal';
+import { FieldInput, StarterIdeas } from './AgentModal';
 import { Markdown } from './Markdown';
 import { progressPct, etaLabel } from '../selectors';
 import type { DemoState, Agent, Task } from '../types';
@@ -148,7 +148,11 @@ export function DemoExperience({ token }: { token: string }) {
       : tourIndex !== null && agents[tourIndex]
         ? {
             text: `This is ${agents[tourIndex].displayName} — ${(agents[tourIndex].tagline || 'part of your new team').replace(/\.$/, '')}. ${
-              tourIndex < agents.length - 1 ? '' : `That's the team, ${firstName} — click anyone to put them to work. The first ${state.demoRunCap} tasks are on us.`
+              tourIndex < agents.length - 1
+                ? ''
+                : `That's the team, ${firstName} — click anyone to put them to work${
+                    agents.some((a) => a.suggestions?.length) ? '; I left a few ideas on their desks to get you started' : ''
+                  }. The first ${state.demoRunCap} tasks are on us.`
             }`,
             button: tourIndex < agents.length - 1 ? 'Next →' : "Let's get to work!",
             onNext: () => setPhase(tourIndex < agents.length - 1 ? tourIndex + 1 : 'free'),
@@ -356,6 +360,10 @@ function DemoAgentDesk({
         {active && (
           <div className="absolute -top-6 left-[32px] z-10 -translate-x-1/2 animate-pulse rounded-md border-2 border-[#5d4326] bg-white px-1 text-sm">💭</div>
         )}
+        {/* ideas waiting on this desk, not yet tried */}
+        {!active && clickable && (agent.suggestions?.length ?? 0) > 0 && !state.tasks.some((t) => t.agentId === agent.id) && (
+          <div className="absolute -top-6 left-[32px] z-10 -translate-x-1/2 animate-bounce rounded-md border-2 border-[#5d4326] bg-white px-1 text-sm">💡</div>
+        )}
         <div className={active ? '' : 'animate-[bob_2.6s_ease-in-out_infinite]'}>
           <Sprite def={character(agent.avatar, active ? frame : 0)} scale={4} />
         </div>
@@ -431,6 +439,7 @@ function DemoTaskModal({
           </div>
         ) : (
           <>
+            <StarterIdeas tasks={agent.suggestions} onPick={setValues} />
             {agent.inputSchema.map((field) => (
               <FieldInput key={field.key} field={field} value={values[field.key] ?? ''} onChange={(v) => setValues({ ...values, [field.key]: v })} />
             ))}

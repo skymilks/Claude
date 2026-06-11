@@ -3,7 +3,7 @@ import { useStore } from './store';
 import { api } from './api';
 import { Office } from './components/Office';
 import { ListView } from './components/ListView';
-import { HireModal } from './components/HireModal';
+import { AgentBuilder } from './components/AgentBuilder';
 import { AgentModal } from './components/AgentModal';
 import { ResultPanel } from './components/ResultPanel';
 import { Boardroom } from './components/Boardroom';
@@ -110,7 +110,9 @@ export default function App() {
                 🏗️ Prospects
               </HeaderButton>
             )}
-            <HeaderButton onClick={() => store.set({ hireOpen: true })}>🤝 Hire</HeaderButton>
+            <HeaderButton onClick={() => store.set({ builderOpen: true })} title="Describe a job — we draft the agent, you approve them">
+              🪑 New hire
+            </HeaderButton>
             <HeaderButton onClick={() => store.set({ boardroomOpen: true })}>
               🏛️ Boardroom
               {state.boardroom.unlocked && state.boardroom.canConvene && (
@@ -176,14 +178,14 @@ export default function App() {
           <div className="mx-auto mb-6 max-w-xl rounded-2xl border border-amber-200 bg-white p-6 text-center shadow-sm">
             <div className="font-pixel text-xs text-[#5d4326]">WELCOME, CEO</div>
             <p className="mt-2 text-sm text-stone-600">
-              Build your executive team of AI agents. They do real work — outreach, plans, research — while the office
-              keeps it fun.
+              Your office is empty — describe a job in plain English and we'll draft your first agent. They do real
+              work; the office keeps it fun.
             </p>
             <button
-              onClick={() => store.set({ hireOpen: true })}
+              onClick={() => store.set({ builderOpen: true })}
               className="mt-4 rounded-xl bg-amber-600 px-6 py-3 font-semibold text-white shadow hover:bg-amber-700"
             >
-              Hire your first agent
+              Create your first agent
             </button>
           </div>
         )}
@@ -191,7 +193,7 @@ export default function App() {
         {store.cosmeticsOff ? <ListView /> : <Office />}
       </main>
 
-      {store.hireOpen && <HireModal />}
+      {store.builderOpen && <AgentBuilder />}
       {store.agentModalId && <AgentModal />}
       {store.resultTaskId && <ResultPanel />}
       {store.boardroomOpen && <Boardroom />}

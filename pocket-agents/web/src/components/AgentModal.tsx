@@ -5,7 +5,7 @@ import { Modal, ModalHeader } from './Modal';
 import { Sprite } from '../pixel/Sprite';
 import { character } from '../pixel/sprites';
 import { activeTaskFor, tasksFor, agentById, etaLabel, progressPct, timeAgo } from '../selectors';
-import type { Field } from '../types';
+import type { Field, StarterTask } from '../types';
 
 const STATUS_ICON: Record<string, string> = { queued: '🕐', running: '⚙️', done: '✅', failed: '⚠️' };
 
@@ -68,6 +68,7 @@ export function AgentModal() {
           </div>
         ) : (
           <div className="space-y-4">
+            <StarterIdeas tasks={agent.suggestions} onPick={setValues} />
             {agent.inputSchema.map((field) => (
               <FieldInput key={field.key} field={field} value={values[field.key] ?? ''} onChange={(v) => setValues({ ...values, [field.key]: v })} />
             ))}
@@ -102,6 +103,29 @@ export function AgentModal() {
         )}
       </div>
     </Modal>
+  );
+}
+
+// Ideas left on the desk: one tap fills the whole task form with a realistic,
+// ready-to-run example tailored to the business — nobody starts at a blank
+// textarea. Values stay editable before assigning.
+export function StarterIdeas({ tasks, onPick }: { tasks: StarterTask[]; onPick: (values: Record<string, string>) => void }) {
+  if (!tasks?.length) return null;
+  return (
+    <div>
+      <div className="mb-1.5 text-xs font-semibold text-stone-500">💡 Ideas on the desk — tap one to fill the form, tweak anything</div>
+      <div className="flex flex-wrap gap-1.5">
+        {tasks.map((task) => (
+          <button
+            key={task.label}
+            onClick={() => onPick({ ...task.input })}
+            className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 shadow-sm transition hover:bg-amber-100"
+          >
+            {task.label}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 

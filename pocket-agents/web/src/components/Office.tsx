@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store';
+import { api } from '../api';
 import { Sprite } from '../pixel/Sprite';
 import { character, desk, CHAIR, PLANT, SUCCULENT, COFFEE, DOG, SHELF, LAMP } from '../pixel/sprites';
 import { activeTaskFor, unseenDone, hasCosmetic, progressPct } from '../selectors';
@@ -8,14 +9,17 @@ import type { Agent, ServerState } from '../types';
 const STAGE_W = 820;
 const STAGE_H = 520;
 
-// Three worker desks in a row, the CEO up by the window. Server assigns
-// deskSlot 0-2 to workers and 3 to the CEO. Each entry is the desk's anchor.
+// Three worker desks in a row, the CEO and an open desk up by the window.
+// Server assigns deskSlot 0-2 and 4 to workers/custom hires, 3 to the CEO.
+// Each entry is the desk's anchor.
 const SLOTS = [
-  { x: 60, y: 250, hire: 'a worker' },
-  { x: 320, y: 250, hire: 'a worker' },
-  { x: 580, y: 250, hire: 'a worker' },
-  { x: 320, y: 86, hire: 'the Chief of Staff' },
+  { x: 60, y: 250 },
+  { x: 320, y: 250 },
+  { x: 580, y: 250 },
+  { x: 320, y: 86 },
+  { x: 60, y: 86 },
 ];
+const CEO_SLOT = 3;
 
 // Sprite footprints at scale 4 (px). The seated character sits in the chair;
 // the deep desk (184px) is drawn in front, hiding the lower body.
@@ -26,6 +30,7 @@ const CHAR_DX = 60, CHAR_DY = -24; // seated character, centered behind the desk
 export function Office() {
   const state = useStore((s) => s.state)!;
   const setStore = useStore((s) => s.set);
+  const { refresh, toast } = useStore();
   const [frame, setFrame] = useState<0 | 1>(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -46,8 +51,18 @@ export function Office() {
   }, []);
 
   const agentsBySlot = new Map(state.agents.map((a) => [a.deskSlot, a]));
-  const workerSlotsFree = [0, 1, 2].some((i) => !agentsBySlot.has(i));
-  const anyWorkerUnhired = ['sales', 'pm', 'researcher'].some((role) => !state.agents.some((a) => a.role === role));
+
+  // The Chief of Staff is the one templated hire left — one click seats them.
+  const hireChief = async () => {
+    if (!confirm('Bring in the Chief of Staff? They read the team’s work and deliver strategy on the premium model.')) return;
+    try {
+      const agent = await api.hire('ceo');
+      toast({ icon: '🤝', title: `${agent.displayName} joined the team!` });
+      await refresh();
+    } catch (err) {
+      toast({ icon: '⚠️', title: 'Could not hire', body: (err as Error).message });
+    }
+  };
 
   return (
     <div ref={containerRef} className="mx-auto w-full max-w-[840px]" style={{ height: STAGE_H * scale }}>
@@ -98,18 +113,15 @@ export function Office() {
         {SLOTS.map((slot, slotIndex) => {
           const agent = agentsBySlot.get(slotIndex);
           if (agent) return <AgentAtDesk key={agent.id} agent={agent} slot={slot} frame={frame} state={state} />;
-          const isCeoSlot = slotIndex === 3;
-          const showGhost = isCeoSlot
-            ? !state.agents.some((a) => a.role === 'ceo')
-            : workerSlotsFree && anyWorkerUnhired;
-          if (!showGhost) return null;
+          const isCeoSlot = slotIndex === CEO_SLOT;
+          if (isCeoSlot && state.agents.some((a) => a.role === 'ceo')) return null;
           return (
             <button
               key={`ghost-${slotIndex}`}
-              onClick={() => setStore({ hireOpen: true })}
+              onClick={() => (isCeoSlot ? hireChief() : setStore({ builderOpen: true }))}
               className="group absolute opacity-45 transition hover:opacity-90"
               style={{ left: slot.x, top: slot.y, width: DESK_W, height: 200 }}
-              title={`Hire ${slot.hire}`}
+              title={isCeoSlot ? 'Bring in the Chief of Staff' : 'An empty desk — create your own agent for it'}
             >
               <div className="absolute" style={{ left: CHAIR_DX, top: CHAIR_DY }}>
                 <Sprite def={CHAIR} scale={4} />
@@ -118,7 +130,7 @@ export function Office() {
                 <Sprite def={desk(false)} scale={4} />
               </div>
               <div className="font-pixel absolute left-0 top-[166px] w-full text-center text-[9px] text-[#5d4326] group-hover:text-[#2f2008]">
-                + HIRE {slot.hire === 'the Chief of Staff' ? 'CHIEF' : ''}
+                {isCeoSlot ? '+ HIRE CHIEF' : '+ CREATE YOUR OWN'}
               </div>
             </button>
           );

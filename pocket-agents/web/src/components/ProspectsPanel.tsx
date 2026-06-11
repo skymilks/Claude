@@ -14,6 +14,7 @@ export function ProspectsPanel({ onClose }: { onClose: () => void }) {
   const toast = useStore((s) => s.toast);
   const [name, setName] = useState('');
   const [company, setCompany] = useState('');
+  const [websiteUrl, setWebsiteUrl] = useState('');
   const [description, setDescription] = useState('');
   const [ctaUrl, setCtaUrl] = useState('');
   const [draft, setDraft] = useState<ProspectDraft | null>(null);
@@ -35,7 +36,7 @@ export function ProspectsPanel({ onClose }: { onClose: () => void }) {
   const doDraft = async () => {
     setBusy('draft');
     try {
-      setDraft(await api.draftProspect(name, company, description));
+      setDraft(await api.draftProspect(name, company, description, websiteUrl));
       setCreatedUrl(null);
     } catch (err) {
       toast({ icon: '⚠️', title: 'Could not draft the office', body: (err as Error).message });
@@ -116,6 +117,12 @@ export function ProspectsPanel({ onClose }: { onClose: () => void }) {
             </label>
           </div>
           <label className="block">
+            <span className="mb-1 block text-xs font-medium text-stone-500">
+              Their website (optional — we read it so the agents and starter ideas use their real services)
+            </span>
+            <input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="e.g. chenplumbing.ca" className={input} />
+          </label>
+          <label className="block">
             <span className="mb-1 block text-xs font-medium text-stone-500">What does their business do? (plain English — more detail = better agents)</span>
             <textarea
               value={description}
@@ -173,6 +180,11 @@ export function ProspectsPanel({ onClose }: { onClose: () => void }) {
                     <span className="text-xs text-stone-400">edit ▾</span>
                   </summary>
                   <div className="border-t border-stone-100 p-3">
+                    {agent.starterTasks.length > 0 && (
+                      <div className="mb-3 text-xs text-stone-500">
+                        💡 Ideas left on their desk: {agent.starterTasks.map((t) => `“${t.label}”`).join(' · ')}
+                      </div>
+                    )}
                     <span className="mb-1 block text-xs font-medium text-stone-500">Instructions (what this agent is and does for {company || 'them'})</span>
                     <textarea
                       value={agent.systemPrompt}

@@ -5,6 +5,7 @@
 import { Router } from 'express';
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { db, uid, now } from './db.js';
+import { seatStarterTeam } from './hire.js';
 
 const COOKIE = 'pa_session';
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -107,6 +108,9 @@ authRoutes.post('/api/auth/signup', (req, res) => {
     `INSERT INTO users (id, email, plan, usageThisPeriod, createdAt, passwordHash, periodStart) VALUES (?, ?, 'free', 0, ?, ?, ?)`
   ).run(userId, email, now(), hashPassword(password), now());
   adoptLegacyData(userId);
+  // Unless legacy data brought a team along, seat the starter trio so the
+  // first thing a new account sees is a working office, not empty desks.
+  if (!db.prepare(`SELECT 1 FROM agents WHERE ownerId = ?`).get(userId)) seatStarterTeam(userId);
   startSession(res, userId);
   res.json({ ok: true });
 });

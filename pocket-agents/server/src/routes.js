@@ -1,27 +1,28 @@
 import { Router } from 'express';
 import { randomBytes } from 'node:crypto';
 import { db, uid, now } from './db.js';
-import { TEMPLATES, templateById } from './templates.js';
-import { CEO_SYSTEM } from './synthesis.js';
+import { templateById } from './templates.js';
 import { demoMode, MODELS, friendlyApiError } from './claude.js';
 import { estimateSeconds, boardroomStatus, queueBoardroom } from './queue.js';
 import { addXp, evaluateUnlocks, UNLOCK_DEFS, levelFromXp, nextLevelXp, companyXp, XP } from './progression.js';
 import { requireAuth, requireAdmin, isAdminUserId, hashPassword } from './auth.js';
 import { PLANS, planOf, ensurePeriod, overCap } from './plans.js';
-import { draftProspectOffice, sanitizeAgentConfigs } from './prospects.js';
+import { draftProspectOffice, draftCustomAgent, sanitizeAgentConfigs } from './prospects.js';
+import { fetchSiteText } from './fetchsite.js';
+import { insertAgent, hireFromTemplate, freeWorkerSlot, seatStarterTeam } from './hire.js';
 
 export const routes = Router();
 
 const getAgent = (id, ownerId) => db.prepare(`SELECT * FROM agents WHERE id = ? AND ownerId = ?`).get(id, ownerId);
 const getTask = (id, ownerId) => db.prepare(`SELECT * FROM tasks WHERE id = ? AND ownerId = ?`).get(id, ownerId);
 
-const agentToJson = (a) => ({ ...a, inputSchema: JSON.parse(a.inputSchema), systemPrompt: undefined });
-const taskToJson = (t) => ({ ...t, input: t.input ? JSON.parse(t.input) : null });
-
-// The hiring gallery is static product copy — fine to serve pre-auth.
-routes.get('/api/templates', (_req, res) => {
-  res.json(TEMPLATES.map(({ systemPrompt, ...t }) => t));
+const agentToJson = (a) => ({
+  ...a,
+  inputSchema: JSON.parse(a.inputSchema),
+  suggestions: a.suggestions ? JSON.parse(a.suggestions) : [],
+  systemPrompt: undefined,
 });
+const taskToJson = (t) => ({ ...t, input: t.input ? JSON.parse(t.input) : null });
 
 // Validate a task's input values against the agent's form schema. Shared by
 // the account task route and the prospect-demo try route.
@@ -134,35 +135,39 @@ routes.post('/api/agents', (req, res) => {
   if (db.prepare(`SELECT 1 FROM agents WHERE ownerId = ? AND role = ?`).get(req.userId, template.role)) {
     return res.status(409).json({ error: `You already have a ${template.name} on the team` });
   }
+  const deskSlot = template.role === 'ceo' ? 3 : freeWorkerSlot(req.userId);
+  if (deskSlot === undefined) return res.status(409).json({ error: 'Every desk is taken' });
 
-  // Desk slots 0-2 are the worker row; slot 3 is the CEO's spot by the window.
-  const taken = new Set(db.prepare(`SELECT deskSlot FROM agents WHERE ownerId = ?`).all(req.userId).map((r) => r.deskSlot));
-  const deskSlot = template.role === 'ceo' ? 3 : [0, 1, 2].find((slot) => !taken.has(slot)) ?? 0;
-
-  const agent = {
-    id: uid(),
-    ownerId: req.userId,
-    templateId: template.id,
-    displayName: (displayName || '').trim().slice(0, 24) || template.name,
-    role: template.role,
-    avatar: template.avatar,
-    tagline: template.tagline,
-    systemPrompt: template.role === 'ceo' ? CEO_SYSTEM : template.systemPrompt,
-    inputSchema: JSON.stringify(template.inputSchema),
-    outputFormat: template.outputFormat,
-    modelTier: template.modelTier,
-    deskSlot,
-    hiredAt: now(),
-  };
-  db.prepare(
-    `INSERT INTO agents (id, ownerId, templateId, displayName, role, avatar, tagline, systemPrompt, inputSchema, outputFormat, modelTier, deskSlot, hiredAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(
-    agent.id, agent.ownerId, agent.templateId, agent.displayName, agent.role, agent.avatar,
-    agent.tagline, agent.systemPrompt, agent.inputSchema, agent.outputFormat, agent.modelTier, agent.deskSlot, agent.hiredAt
-  );
+  const id = hireFromTemplate(req.userId, template, displayName, deskSlot);
   evaluateUnlocks(req.userId);
-  res.json(agentToJson(db.prepare(`SELECT * FROM agents WHERE id = ?`).get(agent.id)));
+  res.json(agentToJson(db.prepare(`SELECT * FROM agents WHERE id = ?`).get(id)));
+});
+
+// The empty-desk builder, step 1: plain-English answers in, a reviewable
+// drafted agent out (nothing persists until step 2).
+routes.post('/api/agents/draft', async (req, res) => {
+  const job = (req.body?.job ?? '').trim().slice(0, 200);
+  const handoff = (req.body?.handoff ?? '').trim().slice(0, 2000);
+  const business = (req.body?.business ?? '').trim().slice(0, 2000);
+  if (!job || !handoff) return res.status(400).json({ error: 'Describe the job and what they should hand you' });
+  if (!capGate(req, res)) return;
+  try {
+    res.json(await draftCustomAgent({ job, handoff, business }));
+  } catch (err) {
+    res.status(502).json({ error: friendlyApiError(err) });
+  }
+});
+
+// Step 2: seat the (possibly edited) drafted agent at a free desk.
+routes.post('/api/agents/custom', (req, res) => {
+  const [config] = sanitizeAgentConfigs([req.body?.agent]);
+  if (!config) return res.status(400).json({ error: 'The agent config is incomplete' });
+  const deskSlot = freeWorkerSlot(req.userId);
+  if (deskSlot === undefined) return res.status(409).json({ error: 'Every desk is taken' });
+
+  const id = insertAgent(req.userId, { ...config, templateId: 'custom', suggestions: config.starterTasks }, deskSlot);
+  evaluateUnlocks(req.userId);
+  res.json(agentToJson(db.prepare(`SELECT * FROM agents WHERE id = ?`).get(id)));
 });
 
 // The paywall gate: new model work is blocked once the plan's monthly token
@@ -308,6 +313,8 @@ routes.delete('/api/account', (req, res) => {
   db.prepare(`DELETE FROM agents WHERE ownerId = ?`).run(req.userId);
   db.prepare(`DELETE FROM unlocks WHERE ownerId = ?`).run(req.userId);
   db.prepare(`UPDATE users SET usageThisPeriod = 0 WHERE id = ?`).run(req.userId);
+  // A reset workspace starts the way a new account does: team already seated.
+  seatStarterTeam(req.userId);
   res.json({ ok: true });
 });
 
@@ -320,11 +327,23 @@ routes.post('/api/admin/prospects/draft', requireAdmin, async (req, res) => {
   const name = (req.body?.name ?? '').trim();
   const company = (req.body?.company ?? '').trim();
   const description = (req.body?.description ?? '').trim();
+  const websiteUrl = (req.body?.websiteUrl ?? '').trim();
   if (!name || !company || !description) {
     return res.status(400).json({ error: 'Name, company, and a business description are all required' });
   }
+
+  // Their public website grounds the draft in real services, city, customers.
+  let siteText = '';
+  if (websiteUrl) {
+    try {
+      siteText = await fetchSiteText(websiteUrl);
+    } catch (err) {
+      return res.status(400).json({ error: err.message });
+    }
+  }
+
   try {
-    res.json(await draftProspectOffice({ name, company, description: description.slice(0, 4000) }));
+    res.json(await draftProspectOffice({ name, company, description: description.slice(0, 4000), siteText }));
   } catch (err) {
     res.status(502).json({ error: friendlyApiError(err) });
   }
@@ -349,10 +368,7 @@ routes.post('/api/admin/prospects', requireAdmin, (req, res) => {
     (welcomeLine ?? '').trim().slice(0, 300), (ctaUrl ?? '').trim().slice(0, 300) || null, req.userId
   );
   agents.forEach((a, i) => {
-    db.prepare(
-      `INSERT INTO agents (id, ownerId, templateId, displayName, role, avatar, tagline, systemPrompt, inputSchema, outputFormat, modelTier, deskSlot, hiredAt)
-       VALUES (?, ?, 'custom', ?, ?, ?, ?, ?, ?, 'markdown', 'standard', ?, ?)`
-    ).run(uid(), demoId, a.displayName, a.role, a.avatar, a.tagline, a.systemPrompt, JSON.stringify(a.inputSchema), i, now());
+    insertAgent(demoId, { ...a, templateId: 'custom', suggestions: a.starterTasks }, i);
   });
   res.json({ id: demoId, token, url: `/demo/${token}` });
 });

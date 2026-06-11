@@ -102,6 +102,9 @@ ensureColumn('users', 'demoRunsUsed', 'demoRunsUsed INTEGER NOT NULL DEFAULT 0')
 ensureColumn('users', 'createdBy', 'createdBy TEXT');
 // One-line role description shown in the hiring gallery / demo tour.
 ensureColumn('agents', 'tagline', 'tagline TEXT');
+// Ready-to-run starter tasks ("ideas left on the desk"): JSON array of
+// { label, input } drafted alongside the agent, shown as one-tap prefills.
+ensureColumn('agents', 'suggestions', 'suggestions TEXT');
 
 export const uid = () => randomUUID();
 export const now = () => new Date().toISOString();

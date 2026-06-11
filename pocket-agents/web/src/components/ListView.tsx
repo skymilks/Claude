@@ -12,8 +12,8 @@ export function ListView() {
       {state.agents.length === 0 && (
         <div className="rounded-xl border border-stone-200 bg-white p-8 text-center text-stone-500">
           No agents yet —{' '}
-          <button className="font-semibold text-amber-600 hover:underline" onClick={() => set({ hireOpen: true })}>
-            hire your first
+          <button className="font-semibold text-amber-600 hover:underline" onClick={() => set({ builderOpen: true })}>
+            create your first
           </button>
           .
         </div>

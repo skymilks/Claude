@@ -7,16 +7,9 @@ export type Field = {
   required?: boolean;
 };
 
-export type Template = {
-  id: string;
-  role: string;
-  name: string;
-  tagline: string;
-  description: string;
-  avatar: string;
-  modelTier: 'standard' | 'premium';
-  inputSchema: Field[];
-};
+// A ready-to-run example task left on an agent's desk: one tap prefills the
+// task form with realistic values tailored to the business.
+export type StarterTask = { label: string; input: Record<string, string> };
 
 export type Agent = {
   id: string;
@@ -26,6 +19,7 @@ export type Agent = {
   avatar: string;
   tagline: string | null;
   inputSchema: Field[];
+  suggestions: StarterTask[];
   outputFormat: string;
   modelTier: 'standard' | 'premium';
   level: number;
@@ -115,6 +109,7 @@ export type DraftAgent = {
   tagline: string;
   systemPrompt: string;
   inputSchema: Field[];
+  starterTasks: StarterTask[];
 };
 
 export type ProspectDraft = {
