@@ -50,6 +50,8 @@ export const api = {
     request<{ id: string; token: string; url: string }>('/api/admin/prospects', { method: 'POST', body: JSON.stringify(payload) }),
   listProspects: () => request<ProspectListItem[]>('/api/admin/prospects'),
   deleteProspect: (id: string) => request<{ ok: true }>(`/api/admin/prospects/${id}`, { method: 'DELETE' }),
+  convertProspect: (id: string, email: string, password: string) =>
+    request<{ ok: true }>(`/api/admin/prospects/${id}/convert`, { method: 'POST', body: JSON.stringify({ email, password }) }),
 
   // Prospect-side demo experience (token link, no login).
   demoState: (token: string) => request<DemoState>(`/api/demo/${token}`),

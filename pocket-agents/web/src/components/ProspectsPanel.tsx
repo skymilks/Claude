@@ -72,6 +72,26 @@ export function ProspectsPanel({ onClose }: { onClose: () => void }) {
     loadExisting();
   };
 
+  // They said yes: the demo becomes their real account — same agents, same
+  // work history. Founder sets a temp login and sends it to the client.
+  const handOver = async (item: ProspectListItem) => {
+    const email = (window.prompt(`${item.name} said yes! 🎉\n\nTheir login email:`) ?? '').trim();
+    if (!email) return;
+    const password = (window.prompt('Temporary password for them (8+ characters — they should change it later):') ?? '').trim();
+    if (!password) return;
+    try {
+      await api.convertProspect(item.id, email, password);
+      toast({
+        icon: '🔑',
+        title: `${item.company} is now a client`,
+        body: `Send them: sign in at ${location.origin} with ${email}. The demo link is dead.`,
+      });
+      loadExisting();
+    } catch (err) {
+      toast({ icon: '⚠️', title: 'Handover failed', body: (err as Error).message });
+    }
+  };
+
   const input = 'w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none';
 
   return (
@@ -207,6 +227,13 @@ export function ProspectsPanel({ onClose }: { onClose: () => void }) {
                   <a href={item.url} target="_blank" rel="noreferrer" className="rounded bg-stone-100 px-2 py-1 text-xs font-semibold text-stone-600 hover:bg-stone-200">
                     Open ↗
                   </a>
+                  <button
+                    onClick={() => handOver(item)}
+                    title="They said yes — turn this demo into their real account (same agents, same history)"
+                    className="rounded bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                  >
+                    🔑 Hand over
+                  </button>
                   <button onClick={() => remove(item)} className="rounded px-2 py-1 text-xs font-semibold text-red-500 hover:bg-red-50">
                     Delete
                   </button>

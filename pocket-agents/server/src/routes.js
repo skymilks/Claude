@@ -6,7 +6,7 @@ import { CEO_SYSTEM } from './synthesis.js';
 import { demoMode, MODELS, friendlyApiError } from './claude.js';
 import { estimateSeconds, boardroomStatus, queueBoardroom } from './queue.js';
 import { addXp, evaluateUnlocks, UNLOCK_DEFS, levelFromXp, nextLevelXp, companyXp, XP } from './progression.js';
-import { requireAuth, requireAdmin, isAdminUserId } from './auth.js';
+import { requireAuth, requireAdmin, isAdminUserId, hashPassword } from './auth.js';
 import { PLANS, planOf, ensurePeriod, overCap } from './plans.js';
 import { draftProspectOffice, sanitizeAgentConfigs } from './prospects.js';
 
@@ -372,6 +372,26 @@ routes.get('/api/admin/prospects', requireAdmin, (_req, res) => {
       createdAt: r.createdAt,
     }))
   );
+});
+
+// The handover: when a prospect says yes, their demo workspace BECOMES their
+// real account — same agents, same work history. The founder sets their login,
+// the demo link dies, and the client signs in at the main URL on the Pro plan
+// (the founder invoices directly; Stripe comes later).
+routes.post('/api/admin/prospects/:id/convert', requireAdmin, (req, res) => {
+  const demo = db.prepare(`SELECT id FROM users WHERE id = ? AND kind = 'demo'`).get(req.params.id);
+  if (!demo) return res.status(404).json({ error: 'Demo not found' });
+  const email = (req.body?.email ?? '').trim().toLowerCase();
+  const password = req.body?.password ?? '';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Enter a valid email address' });
+  if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+  if (db.prepare(`SELECT 1 FROM users WHERE email = ?`).get(email)) {
+    return res.status(409).json({ error: 'An account with that email already exists' });
+  }
+  db.prepare(
+    `UPDATE users SET kind = 'user', email = ?, passwordHash = ?, plan = 'pro', demoToken = NULL, periodStart = ? WHERE id = ?`
+  ).run(email, hashPassword(password), now(), demo.id);
+  res.json({ ok: true });
 });
 
 routes.delete('/api/admin/prospects/:id', requireAdmin, (req, res) => {
