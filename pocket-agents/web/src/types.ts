@@ -126,6 +126,8 @@ export type ProspectListItem = {
   runsUsed: number;
   runCap: number;
   createdAt: string;
+  interestedAt: string | null;
+  interestNote: string | null;
 };
 
 export type DemoState = {
@@ -140,6 +142,7 @@ export type DemoState = {
   tasks: Task[];
   demoRunsUsed: number;
   demoRunCap: number;
+  interested: boolean;
   demoMode: boolean;
   now: string;
 };

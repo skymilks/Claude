@@ -71,9 +71,20 @@ routes.get('/api/demo/:token', (req, res) => {
     tasks: tasks.map(taskToJson),
     demoRunsUsed: demo.demoRunsUsed,
     demoRunCap: DEMO_RUN_CAP,
+    interested: !!demo.interestedAt,
     demoMode,
     now: now(),
   });
+});
+
+// The warm close: a sold prospect raises their hand. No run cap — it's a
+// single flag behind the unguessable token; the founder sees it as 🔥 HOT.
+routes.post('/api/demo/:token/interested', (req, res) => {
+  const demo = demoByToken(req.params.token);
+  if (!demo) return res.status(404).json({ error: 'This demo link is no longer active.' });
+  const note = (req.body?.note ?? '').toString().trim().slice(0, 500);
+  db.prepare(`UPDATE users SET interestedAt = ?, interestNote = ? WHERE id = ?`).run(now(), note || null, demo.id);
+  res.json({ ok: true });
 });
 
 routes.post('/api/demo/:token/try', (req, res) => {
@@ -375,7 +386,10 @@ routes.post('/api/admin/prospects', requireAdmin, (req, res) => {
 
 routes.get('/api/admin/prospects', requireAdmin, (_req, res) => {
   const rows = db
-    .prepare(`SELECT id, prospectName, prospectCompany, demoToken, demoRunsUsed, createdAt FROM users WHERE kind = 'demo' ORDER BY createdAt DESC`)
+    .prepare(
+      `SELECT id, prospectName, prospectCompany, demoToken, demoRunsUsed, createdAt, interestedAt, interestNote
+       FROM users WHERE kind = 'demo' ORDER BY createdAt DESC`
+    )
     .all();
   res.json(
     rows.map((r) => ({
@@ -386,6 +400,8 @@ routes.get('/api/admin/prospects', requireAdmin, (_req, res) => {
       runsUsed: r.demoRunsUsed,
       runCap: DEMO_RUN_CAP,
       createdAt: r.createdAt,
+      interestedAt: r.interestedAt,
+      interestNote: r.interestNote,
     }))
   );
 });

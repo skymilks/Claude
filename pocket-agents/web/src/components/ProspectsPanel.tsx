@@ -224,14 +224,30 @@ export function ProspectsPanel({ onClose }: { onClose: () => void }) {
           <div>
             <h3 className="mb-2 text-sm font-semibold text-stone-500">Sent offices</h3>
             <div className="space-y-1.5">
-              {existing.map((item) => (
-                <div key={item.id} className="flex items-center gap-3 rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm">
+              {[...existing]
+                .sort((a, b) => Number(!!b.interestedAt) - Number(!!a.interestedAt))
+                .map((item) => (
+                <div
+                  key={item.id}
+                  className={`flex items-center gap-3 rounded-lg border px-3 py-2 text-sm ${
+                    item.interestedAt ? 'border-emerald-300 bg-emerald-50/60' : 'border-stone-200 bg-white'
+                  }`}
+                >
                   <span className="min-w-0 flex-1">
                     <span className="font-semibold text-stone-800">{item.name}</span>
                     <span className="text-stone-500"> · {item.company}</span>
+                    {item.interestedAt && (
+                      <span className="ml-2 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">🔥 HOT</span>
+                    )}
                     <span className="block text-xs text-stone-400">
                       {item.runsUsed}/{item.runCap} runs used · created {timeAgo(item.createdAt)}
+                      {item.interestedAt && <> · raised their hand {timeAgo(item.interestedAt)}</>}
                     </span>
+                    {item.interestNote && (
+                      <span className="mt-1 block rounded bg-white px-2 py-1 text-xs italic text-stone-600 ring-1 ring-emerald-200">
+                        “{item.interestNote}”
+                      </span>
+                    )}
                   </span>
                   <button onClick={() => copy(item.url)} className="rounded bg-stone-100 px-2 py-1 text-xs font-semibold text-stone-600 hover:bg-stone-200">
                     Copy link

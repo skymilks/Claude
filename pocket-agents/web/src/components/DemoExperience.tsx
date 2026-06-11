@@ -29,6 +29,21 @@ const GREETER = {
   center: { x: 330, y: 320 },
   home: { x: 470, y: 150 },
 };
+// Where the Chief stands to host a desk while its agent works.
+const deskMark = (slot: number) => {
+  const d = DESKS[slot] ?? DESKS[0];
+  return { x: d.x - 4, y: d.y + 64 };
+};
+
+// Live status the Chief speaks while a task runs — tracks real elapsed time
+// off progressPct, so no fake timers.
+function waitingLine(task: Task, name: string, nowIso: string): string {
+  if (task.status === 'queued') return `Getting ${name} started…`;
+  const pct = progressPct(task, nowIso);
+  if (pct < 30) return `${name}'s on it — reading your request…`;
+  if (pct < 70) return `Drafting it now. ${name}'s good at this.`;
+  return `Just polishing it up…`;
+}
 
 type Phase = 'enter' | 'welcome' | number /* tour step = agent index */ | 'free';
 
@@ -39,9 +54,15 @@ export function DemoExperience({ token }: { token: string }) {
   const [tryAgentId, setTryAgentId] = useState<string | null>(null);
   const [resultTaskId, setResultTaskId] = useState<string | null>(null);
   const [walkFrame, setWalkFrame] = useState<0 | 1>(0);
+  // When a task just finished: the Chief delivers a "here's what they did"
+  // beat at the desk before the result modal opens.
+  const [doneBeat, setDoneBeat] = useState<{ taskId: string; agentId: string } | null>(null);
+  // The prospect raised their hand in the warm close (lifted so every CTA
+  // instance reflects it; seeded from the server so a reload stays confirmed).
+  const [interested, setInterested] = useState(false);
   const prevStatuses = useRef<Map<string, string> | null>(null);
 
-  // Poll the demo state; ding + open the result when a task completes.
+  // Poll the demo state; ding + host the completion when a task finishes.
   useEffect(() => {
     let stop = false;
     const load = async () => {
@@ -53,7 +74,7 @@ export function DemoExperience({ token }: { token: string }) {
             const prev = prevStatuses.current.get(task.id);
             if (prev && prev !== 'done' && prev !== 'failed' && task.status === 'done') {
               ding();
-              setResultTaskId(task.id);
+              setDoneBeat({ taskId: task.id, agentId: task.agentId });
             }
           }
         }
@@ -88,14 +109,6 @@ export function DemoExperience({ token }: { token: string }) {
     return () => clearTimeout(t1);
   }, [entered, phase]);
 
-  // Feet move while the greeter is between marks.
-  const walking = phase === 'enter';
-  useEffect(() => {
-    if (!walking) return setWalkFrame(0);
-    const id = setInterval(() => setWalkFrame((f) => (f === 0 ? 1 : 0)), 220);
-    return () => clearInterval(id);
-  }, [walking]);
-
   // Responsive stage scaling (same trick as the main Office).
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -105,6 +118,46 @@ export function DemoExperience({ token }: { token: string }) {
     window.addEventListener('resize', fit);
     return () => window.removeEventListener('resize', fit);
   }, []);
+
+  // Which desk the Chief is hosting: the one with a running task, or the one
+  // that just finished (during the done beat). null = she's at her own mark.
+  const activeTask = state?.tasks.find((t) => t.status === 'queued' || t.status === 'running') ?? null;
+  const focusAgentId = doneBeat?.agentId ?? activeTask?.agentId ?? null;
+  const focusSlot = focusAgentId ? state?.agents.find((a) => a.id === focusAgentId)?.deskSlot ?? null : null;
+
+  // Where she's headed — used both to place her and to animate her feet while
+  // she's in transit (the CSS transition does the gliding).
+  const targetKey = !entered ? 'off' : focusSlot != null ? `desk${focusSlot}` : phase === 'free' ? 'home' : 'center';
+  const [moving, setMoving] = useState(false);
+  const prevTarget = useRef(targetKey);
+  useEffect(() => {
+    if (prevTarget.current === targetKey) return;
+    prevTarget.current = targetKey;
+    setMoving(true);
+    const t = setTimeout(() => setMoving(false), 1900);
+    return () => clearTimeout(t);
+  }, [targetKey]);
+  const walking = phase === 'enter' || moving;
+  useEffect(() => {
+    if (!walking) return setWalkFrame(0);
+    const id = setInterval(() => setWalkFrame((f) => (f === 0 ? 1 : 0)), 220);
+    return () => clearInterval(id);
+  }, [walking]);
+
+  // After the "here's what they did" beat, open the result.
+  useEffect(() => {
+    if (!doneBeat) return;
+    const t = setTimeout(() => {
+      setResultTaskId(doneBeat.taskId);
+      setDoneBeat(null);
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [doneBeat]);
+
+  // Stay confirmed across reloads once the server records the hand-raise.
+  useEffect(() => {
+    if (state?.interested) setInterested(true);
+  }, [state?.interested]);
 
   if (gone) {
     return (
@@ -132,10 +185,21 @@ export function DemoExperience({ token }: { token: string }) {
   const firstName = (prospect.name ?? '').split(/\s+/)[0] || 'there';
   const runsLeft = Math.max(0, state.demoRunCap - state.demoRunsUsed);
   const tourIndex = typeof phase === 'number' ? phase : null;
-  const greeterAt = !entered ? GREETER.offstage : phase === 'free' ? GREETER.home : GREETER.center;
+  const greeterAt =
+    !entered ? GREETER.offstage : focusSlot != null ? deskMark(focusSlot) : phase === 'free' ? GREETER.home : GREETER.center;
   const tryAgent = agents.find((a) => a.id === tryAgentId) ?? null;
   const resultTask = state.tasks.find((t) => t.id === resultTaskId) ?? null;
-  const anyActive = state.tasks.some((t) => t.status === 'queued' || t.status === 'running');
+  const anyActive = !!activeTask;
+
+  // While she's at a desk, the Chief narrates the work instead of the tour.
+  const activeAgent = activeTask ? agents.find((a) => a.id === activeTask.agentId) ?? null : null;
+  const doneAgent = doneBeat ? agents.find((a) => a.id === doneBeat.agentId) ?? null : null;
+  const narration =
+    doneBeat && doneAgent
+      ? `Here's what ${doneAgent.displayName} put together —`
+      : activeTask && activeAgent
+        ? waitingLine(activeTask, activeAgent.displayName, state.now)
+        : null;
 
   const dialogue =
     phase === 'welcome'
@@ -224,23 +288,25 @@ export function DemoExperience({ token }: { token: string }) {
               </div>
             </div>
 
-            {/* dialogue box */}
-            {dialogue && (
+            {/* dialogue box — the Chief's narration takes precedence over the tour */}
+            {(narration || dialogue) && (
               <div className="absolute inset-x-[40px] bottom-[16px] z-20 rounded-xl border-4 border-[#5d4326] bg-[#faf3e6] p-4 shadow-xl">
-                <Typewriter key={String(phase)} text={dialogue.text} />
-                <div className="mt-3 flex items-center justify-end gap-3">
-                  {dialogue.skip && (
-                    <button onClick={() => setPhase('free')} className="text-xs font-semibold text-stone-400 hover:text-stone-600">
-                      Skip tour
+                <Typewriter key={narration ?? dialogue!.text} text={narration ?? dialogue!.text} />
+                {!narration && dialogue && (
+                  <div className="mt-3 flex items-center justify-end gap-3">
+                    {dialogue.skip && (
+                      <button onClick={() => setPhase('free')} className="text-xs font-semibold text-stone-400 hover:text-stone-600">
+                        Skip tour
+                      </button>
+                    )}
+                    <button
+                      onClick={dialogue.onNext}
+                      className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-amber-700"
+                    >
+                      {dialogue.button}
                     </button>
-                  )}
-                  <button
-                    onClick={dialogue.onNext}
-                    className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-amber-700"
-                  >
-                    {dialogue.button}
-                  </button>
-                </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -256,7 +322,15 @@ export function DemoExperience({ token }: { token: string }) {
             </div>
           )}
           {phase === 'free' && (
-            <ClaimCard company={prospect.company} ctaUrl={prospect.ctaUrl} subtle={runsLeft > 0 && !state.tasks.some((t) => t.status === 'done')} />
+            <ClaimCard
+              token={token}
+              firstName={firstName}
+              company={prospect.company}
+              ctaUrl={prospect.ctaUrl}
+              interested={interested}
+              onInterested={() => setInterested(true)}
+              subtle={!interested && runsLeft > 0 && !state.tasks.some((t) => t.status === 'done')}
+            />
           )}
           <div className="text-xs text-stone-400">
             A personalized preview built for {prospect.name} · powered by Pocket Agents
@@ -269,13 +343,26 @@ export function DemoExperience({ token }: { token: string }) {
           token={token}
           agent={tryAgent}
           runsLeft={runsLeft}
+          firstName={firstName}
           ctaUrl={prospect.ctaUrl}
+          interested={interested}
+          onInterested={() => setInterested(true)}
           onQueued={() => setTryAgentId(null)}
           onClose={() => setTryAgentId(null)}
         />
       )}
       {resultTask && (
-        <DemoResultModal task={resultTask} state={state} ctaUrl={prospect.ctaUrl} company={prospect.company} onClose={() => setResultTaskId(null)} />
+        <DemoResultModal
+          task={resultTask}
+          state={state}
+          token={token}
+          firstName={firstName}
+          ctaUrl={prospect.ctaUrl}
+          company={prospect.company}
+          interested={interested}
+          onInterested={() => setInterested(true)}
+          onClose={() => setResultTaskId(null)}
+        />
       )}
     </Shell>
   );
@@ -387,14 +474,20 @@ function DemoTaskModal({
   token,
   agent,
   runsLeft,
+  firstName,
   ctaUrl,
+  interested,
+  onInterested,
   onQueued,
   onClose,
 }: {
   token: string;
   agent: Agent;
   runsLeft: number;
+  firstName: string;
   ctaUrl: string | null;
+  interested: boolean;
+  onInterested: () => void;
   onQueued: () => void;
   onClose: () => void;
 }) {
@@ -429,13 +522,12 @@ function DemoTaskModal({
       />
       <div className="max-h-[70vh] space-y-4 overflow-y-auto p-6">
         {runsLeft <= 0 ? (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-stone-700">
-            Your {`free runs are used up — but the team is ready to go full-time.`}
-            {ctaUrl && (
-              <a href={ctaUrl} target="_blank" rel="noreferrer" className="mt-3 block rounded-xl bg-emerald-600 px-4 py-2.5 text-center font-semibold text-white shadow hover:bg-emerald-700">
-                Claim your office →
-              </a>
-            )}
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-center">
+            <div className="font-semibold text-emerald-900">That's your team in action, {firstName}.</div>
+            <p className="mb-3 mt-1 text-sm text-emerald-800">
+              The free runs are used up — but {agent.displayName} and the rest are ready to go full-time.
+            </p>
+            <ClaimAction token={token} firstName={firstName} ctaUrl={ctaUrl} interested={interested} onInterested={onInterested} />
           </div>
         ) : (
           <>
@@ -461,14 +553,22 @@ function DemoTaskModal({
 function DemoResultModal({
   task,
   state,
+  token,
+  firstName,
   ctaUrl,
   company,
+  interested,
+  onInterested,
   onClose,
 }: {
   task: Task;
   state: DemoState;
+  token: string;
+  firstName: string;
   ctaUrl: string | null;
   company: string;
+  interested: boolean;
+  onInterested: () => void;
   onClose: () => void;
 }) {
   const agent = state.agents.find((a) => a.id === task.agentId);
@@ -519,14 +619,10 @@ function DemoResultModal({
             </div>
             <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
               <div className="font-semibold text-emerald-900">This took your team a minute. Imagine it every day.</div>
-              <p className="mt-1 text-sm text-emerald-800">
+              <p className="mb-3 mt-1 text-sm text-emerald-800">
                 {company}'s office is built and ready — agents, history, the lot. We just hand you the keys.
               </p>
-              {ctaUrl && (
-                <a href={ctaUrl} target="_blank" rel="noreferrer" className="mt-3 inline-block rounded-xl bg-emerald-600 px-5 py-2.5 font-semibold text-white shadow hover:bg-emerald-700">
-                  Claim your office →
-                </a>
-              )}
+              <ClaimAction token={token} firstName={firstName} ctaUrl={ctaUrl} interested={interested} onInterested={onInterested} />
             </div>
           </>
         )}
@@ -535,19 +631,111 @@ function DemoResultModal({
   );
 }
 
-function ClaimCard({ company, ctaUrl, subtle }: { company: string; ctaUrl: string | null; subtle: boolean }) {
+function ClaimCard({
+  token,
+  firstName,
+  company,
+  ctaUrl,
+  interested,
+  onInterested,
+  subtle,
+}: {
+  token: string;
+  firstName: string;
+  company: string;
+  ctaUrl: string | null;
+  interested: boolean;
+  onInterested: () => void;
+  subtle: boolean;
+}) {
   if (subtle) return null;
   return (
     <div className="rounded-2xl border border-emerald-200 bg-white p-5 text-center shadow-sm">
       <div className="font-semibold text-stone-800">Like your new team?</div>
-      <p className="mt-1 text-sm text-stone-600">This office was built just for {company}. Claim it and they start Monday.</p>
-      {ctaUrl ? (
-        <a href={ctaUrl} target="_blank" rel="noreferrer" className="mt-3 inline-block rounded-xl bg-emerald-600 px-6 py-3 font-semibold text-white shadow hover:bg-emerald-700">
-          Claim your office →
-        </a>
-      ) : (
-        <p className="mt-2 text-sm font-semibold text-emerald-700">Reply to the message that brought you here and we'll hand over the keys.</p>
-      )}
+      <p className="mb-3 mt-1 text-sm text-stone-600">This office was built just for {company}. Say the word and they start Monday.</p>
+      <ClaimAction token={token} firstName={firstName} ctaUrl={ctaUrl} interested={interested} onInterested={onInterested} />
+    </div>
+  );
+}
+
+// The one-tap "I want this" — the single sold-action across every CTA spot.
+// On send it flags the demo HOT for the founder; once raised, it stays
+// confirmed (and offers a booking link as a gentle secondary step).
+function ClaimAction({
+  token,
+  firstName,
+  ctaUrl,
+  interested,
+  onInterested,
+}: {
+  token: string;
+  firstName: string;
+  ctaUrl: string | null;
+  interested: boolean;
+  onInterested: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (interested) {
+    return (
+      <div className="space-y-2">
+        <div className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white">
+          ✓ They know you're interested
+        </div>
+        <p className="text-sm text-emerald-800">Amazing — I'll tell the team you're coming, {firstName}. Talk soon.</p>
+        {ctaUrl && (
+          <a href={ctaUrl} target="_blank" rel="noreferrer" className="inline-block text-sm font-semibold text-emerald-700 underline">
+            Want to grab a time now? →
+          </a>
+        )}
+      </div>
+    );
+  }
+
+  const send = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await api.demoInterested(token, note);
+      onInterested();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="rounded-xl bg-emerald-600 px-6 py-3 font-semibold text-white shadow hover:bg-emerald-700"
+      >
+        Yes — I want my team →
+      </button>
+    );
+  }
+
+  return (
+    <div className="space-y-2 text-left">
+      <textarea
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        rows={2}
+        placeholder="Anything you want me to know? (optional)"
+        className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+      />
+      {error && <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
+      <button
+        onClick={send}
+        disabled={busy}
+        className="w-full rounded-xl bg-emerald-600 py-3 font-semibold text-white shadow hover:bg-emerald-700 disabled:opacity-50"
+      >
+        {busy ? 'Sending…' : 'Send — have them reach out'}
+      </button>
     </div>
   );
 }

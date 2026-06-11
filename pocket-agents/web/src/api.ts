@@ -64,4 +64,6 @@ export const api = {
   demoState: (token: string) => request<DemoState>(`/api/demo/${token}`),
   demoTry: (token: string, agentId: string, input: Record<string, string>) =>
     request<Task>(`/api/demo/${token}/try`, { method: 'POST', body: JSON.stringify({ agentId, input }) }),
+  demoInterested: (token: string, note: string) =>
+    request<{ ok: true }>(`/api/demo/${token}/interested`, { method: 'POST', body: JSON.stringify({ note }) }),
 };

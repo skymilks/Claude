@@ -100,6 +100,9 @@ ensureColumn('users', 'welcomeLine', 'welcomeLine TEXT');
 ensureColumn('users', 'ctaUrl', 'ctaUrl TEXT');
 ensureColumn('users', 'demoRunsUsed', 'demoRunsUsed INTEGER NOT NULL DEFAULT 0');
 ensureColumn('users', 'createdBy', 'createdBy TEXT');
+// When a prospect raises their hand in the demo's warm close.
+ensureColumn('users', 'interestedAt', 'interestedAt TEXT');
+ensureColumn('users', 'interestNote', 'interestNote TEXT');
 // One-line role description shown in the hiring gallery / demo tour.
 ensureColumn('agents', 'tagline', 'tagline TEXT');
 // Ready-to-run starter tasks ("ideas left on the desk"): JSON array of
