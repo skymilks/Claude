@@ -18,7 +18,16 @@ db.exec(`
     email           TEXT,
     plan            TEXT NOT NULL DEFAULT 'free',
     usageThisPeriod INTEGER NOT NULL DEFAULT 0,
-    createdAt       TEXT NOT NULL
+    createdAt       TEXT NOT NULL,
+    passwordHash    TEXT,
+    periodStart     TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS sessions (
+    token     TEXT PRIMARY KEY,
+    userId    TEXT NOT NULL,
+    createdAt TEXT NOT NULL,
+    expiresAt TEXT NOT NULL
   );
 
   CREATE TABLE IF NOT EXISTS agents (
@@ -70,11 +79,14 @@ db.exec(`
   );
 `);
 
-// v1 runs single-user; auth (milestone 8) will replace this stub.
-export const OWNER_ID = 'local';
-db.prepare(
-  `INSERT OR IGNORE INTO users (id, email, plan, usageThisPeriod, createdAt) VALUES (?, ?, 'free', 0, ?)`
-).run(OWNER_ID, null, new Date().toISOString());
+// Schema upgrades for databases created by earlier builds (CREATE TABLE IF
+// NOT EXISTS won't add new columns to an existing table).
+function ensureColumn(table, column, ddl) {
+  const exists = db.prepare(`PRAGMA table_info(${table})`).all().some((c) => c.name === column);
+  if (!exists) db.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
+}
+ensureColumn('users', 'passwordHash', 'passwordHash TEXT');
+ensureColumn('users', 'periodStart', 'periodStart TEXT');
 
 export const uid = () => randomUUID();
 export const now = () => new Date().toISOString();

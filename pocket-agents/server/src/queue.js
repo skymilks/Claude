@@ -3,10 +3,11 @@
 // independent of whether any browser tab is open. The browser only ever polls
 // status. (Swapping this loop for Supabase Edge Functions / a hosted queue is
 // the deploy-time change; the tasks table contract stays the same.)
-import { db, now, uid, OWNER_ID } from './db.js';
+import { db, now, uid } from './db.js';
 import { runModel, friendlyApiError, demoMode } from './claude.js';
 import { CEO_SYSTEM, recentWorkBlock, ceoUserContent, boardroomUserContent } from './synthesis.js';
 import { addXp, evaluateUnlocks, hasUnlock, XP } from './progression.js';
+import { ensurePeriod } from './plans.js';
 
 const CONCURRENCY = 2;
 const TICK_MS = 1500;
@@ -48,7 +49,7 @@ async function runTask(task) {
 
     let system, userContent;
     if (task.kind === 'boardroom' || agent.role === 'ceo') {
-      const work = recentWorkBlock();
+      const work = recentWorkBlock(task.ownerId);
       if (!work) throw new Error('The team has no completed work to synthesize yet.');
       system = CEO_SYSTEM;
       const input = task.input ? JSON.parse(task.input) : {};
@@ -63,9 +64,10 @@ async function runTask(task) {
     db.prepare(`UPDATE tasks SET status = 'done', output = ?, tokensUsed = ?, modelUsed = ?, finishedAt = ? WHERE id = ?`).run(
       text, tokensUsed, modelUsed, now(), task.id
     );
-    db.prepare(`UPDATE users SET usageThisPeriod = usageThisPeriod + ? WHERE id = ?`).run(tokensUsed, OWNER_ID);
+    ensurePeriod(task.ownerId); // roll the month first so tokens land in the right period
+    db.prepare(`UPDATE users SET usageThisPeriod = usageThisPeriod + ? WHERE id = ?`).run(tokensUsed, task.ownerId);
     addXp(agent.id, task.kind === 'boardroom' ? XP.boardroomDone : XP.taskDone);
-    evaluateUnlocks();
+    evaluateUnlocks(task.ownerId);
   } catch (err) {
     db.prepare(`UPDATE tasks SET status = 'failed', error = ?, finishedAt = ? WHERE id = ?`).run(
       friendlyApiError(err), now(), task.id
@@ -90,19 +92,19 @@ export function estimateSeconds(modelTier, inputChars = 0) {
   return Math.min(45, 10 + Math.round(inputChars / 400));
 }
 
-export function boardroomStatus() {
-  const unlocked = hasUnlock('boardroom');
-  const ceo = db.prepare(`SELECT * FROM agents WHERE ownerId = ? AND role = 'ceo'`).get(OWNER_ID);
+export function boardroomStatus(ownerId) {
+  const unlocked = hasUnlock(ownerId, 'boardroom');
+  const ceo = db.prepare(`SELECT * FROM agents WHERE ownerId = ? AND role = 'ceo'`).get(ownerId);
   const lastDone = db
     .prepare(`SELECT finishedAt FROM tasks WHERE ownerId = ? AND kind = 'boardroom' AND status = 'done' ORDER BY finishedAt DESC LIMIT 1`)
-    .get(OWNER_ID);
+    .get(ownerId);
   const inFlight = !!db
     .prepare(`SELECT 1 FROM tasks WHERE ownerId = ? AND kind = 'boardroom' AND status IN ('queued','running')`)
-    .get(OWNER_ID);
+    .get(ownerId);
   const sinceClause = lastDone ? `AND finishedAt > '${lastDone.finishedAt}'` : '';
   const completedSinceLast = db
     .prepare(`SELECT COUNT(*) AS n FROM tasks WHERE ownerId = ? AND status = 'done' AND kind = 'task' ${sinceClause}`)
-    .get(OWNER_ID).n;
+    .get(ownerId).n;
   const dueAt = lastDone ? new Date(new Date(lastDone.finishedAt).getTime() + BOARDROOM_INTERVAL_MS).toISOString() : null;
   const cooldownOver = !dueAt || Date.now() >= new Date(dueAt).getTime();
 
@@ -123,10 +125,10 @@ export function boardroomStatus() {
   };
 }
 
-export function queueBoardroom(ceoAgentId) {
+export function queueBoardroom(ownerId, ceoAgentId) {
   const task = {
     id: uid(),
-    ownerId: OWNER_ID,
+    ownerId,
     agentId: ceoAgentId,
     kind: 'boardroom',
     title: `Boardroom — week of ${now().slice(0, 10)}`,
@@ -144,6 +146,8 @@ export function queueBoardroom(ceoAgentId) {
 // The scheduled ritual: once unlocked, a boardroom convenes weekly on the
 // server whenever there's enough fresh work — even with no tab open.
 function autoQueueBoardroom() {
-  const status = boardroomStatus();
-  if (status.canConvene && status.completedSinceLast >= 3) queueBoardroom(status.ceoAgentId);
+  for (const { id } of db.prepare(`SELECT id FROM users`).all()) {
+    const status = boardroomStatus(id);
+    if (status.canConvene && status.completedSinceLast >= 3) queueBoardroom(id, status.ceoAgentId);
+  }
 }

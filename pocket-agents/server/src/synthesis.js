@@ -2,7 +2,7 @@
 // agents' recent work, then synthesize strategy" — surfaced two ways. Both
 // build their prompt here. v1 reads stored task history; v2 (orchestration)
 // will let the CEO trigger fresh agent runs before synthesizing.
-import { db, OWNER_ID } from './db.js';
+import { db } from './db.js';
 
 export const CEO_SYSTEM = `You are the Chief of Staff at a small company. The other AI agents — Sales, Project Manager, Researcher — report to you; the human CEO is your boss.
 
@@ -16,7 +16,7 @@ You will be given the team's recent work products. Read them and deliver strateg
 Format everything in clean Markdown.`;
 
 // Recent completed work from the worker agents, formatted for the CEO's context.
-export function recentWorkBlock({ limit = 12, maxCharsPerItem = 2200 } = {}) {
+export function recentWorkBlock(ownerId, { limit = 12, maxCharsPerItem = 2200 } = {}) {
   const rows = db
     .prepare(
       `SELECT t.title, t.output, t.finishedAt, t.rating, a.role, a.displayName
@@ -24,7 +24,7 @@ export function recentWorkBlock({ limit = 12, maxCharsPerItem = 2200 } = {}) {
        WHERE t.ownerId = ? AND t.status = 'done' AND t.kind = 'task' AND a.role != 'ceo'
        ORDER BY t.finishedAt DESC LIMIT ?`
     )
-    .all(OWNER_ID, limit);
+    .all(ownerId, limit);
 
   if (rows.length === 0) return null;
 

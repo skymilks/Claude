@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { routes } from './routes.js';
+import { authRoutes } from './auth.js';
 import { startWorker } from './queue.js';
 import { demoMode, MODELS } from './claude.js';
 
@@ -16,6 +17,7 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use(authRoutes);
 app.use(routes);
 
 const here = path.dirname(fileURLToPath(import.meta.url));

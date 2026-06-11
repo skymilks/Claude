@@ -82,8 +82,17 @@ export type UnlockDef = {
   icon: string;
 };
 
+export type Plan = { name: string; tokenCap: number };
+
 export type ServerState = {
-  user: { plan: string; usageThisPeriod: number };
+  user: {
+    email: string;
+    plan: 'free' | 'pro';
+    usageThisPeriod: number;
+    tokenCap: number;
+    periodStart: string | null;
+  };
+  plans: { free: Plan; pro: Plan };
   agents: Agent[];
   tasks: Task[];
   unlocks: Unlock[];

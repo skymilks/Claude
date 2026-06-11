@@ -1,5 +1,5 @@
 import { useStore } from '../store';
-import { api } from '../api';
+import { api, ApiError } from '../api';
 import { Modal, ModalHeader } from './Modal';
 import { Markdown } from './Markdown';
 import { boardroomReports, timeAgo } from '../selectors';
@@ -25,7 +25,8 @@ export function Boardroom() {
       toast({ icon: '🏛️', title: 'The team is convening', body: 'Your strategy brief will be ready in a few minutes.' });
       await refresh();
     } catch (err) {
-      toast({ icon: '⚠️', title: 'Boardroom unavailable', body: (err as Error).message });
+      if (err instanceof ApiError && err.code === 'over_cap') set({ upgradeOpen: true });
+      else toast({ icon: '⚠️', title: 'Boardroom unavailable', body: (err as Error).message });
     }
   };
 

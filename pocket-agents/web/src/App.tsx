@@ -9,20 +9,22 @@ import { ResultPanel } from './components/ResultPanel';
 import { Boardroom } from './components/Boardroom';
 import { Tray } from './components/Tray';
 import { Unlocks } from './components/Unlocks';
+import { AuthScreen } from './components/AuthScreen';
+import { UpgradeModal } from './components/UpgradeModal';
+import { PrivacyModal } from './components/PrivacyModal';
 import { unseenDone } from './selectors';
 
 export default function App() {
   const store = useStore();
-  const { state } = store;
+  const { state, authed } = store;
   const [unlocksOpen, setUnlocksOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     store.init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (!state) {
+  if (authed === null) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#f3e7d3]">
         <div className="font-pixel text-sm text-[#6b4f2e]">LOADING OFFICE…</div>
@@ -30,17 +32,29 @@ export default function App() {
     );
   }
 
+  if (authed === false || !state) {
+    return (
+      <>
+        <AuthScreen />
+        {store.privacyOpen && <PrivacyModal />}
+      </>
+    );
+  }
+
   const unseen = unseenDone(state).length;
   const xpPct = state.company.nextLevelXp
     ? Math.min(100, Math.round((state.company.xp / state.company.nextLevelXp) * 100))
     : 100;
+  const usagePct = Math.min(100, Math.round((state.user.usageThisPeriod / state.user.tokenCap) * 100));
 
   const wipe = async () => {
-    if (!confirm('Delete ALL agents, tasks, and unlocks? This cannot be undone.')) return;
+    if (!confirm('Delete ALL agents, tasks, and unlocks in this workspace? This cannot be undone.')) return;
     await api.wipeAccount();
-    setMenuOpen(false);
+    store.set({ menuOpen: false });
     location.reload();
   };
+
+  const anyDropdownOpen = store.trayOpen || store.menuOpen;
 
   return (
     <div className="min-h-screen bg-[#f3e7d3] pb-16">
@@ -55,9 +69,23 @@ export default function App() {
             </div>
           </div>
 
-          <span className="text-xs text-stone-500">
-            {state.user.usageThisPeriod.toLocaleString()} tokens · {state.user.plan} plan
-          </span>
+          <button
+            onClick={() => store.set({ upgradeOpen: true })}
+            className="flex items-center gap-2 text-xs text-stone-500 hover:text-stone-700"
+            title={`${state.user.usageThisPeriod.toLocaleString()} of ${state.user.tokenCap.toLocaleString()} tokens used this month`}
+          >
+            <div className="h-2 w-20 overflow-hidden rounded-full bg-[#e2d3b6]">
+              <div
+                className={`h-full ${usagePct >= 90 ? 'bg-red-500' : usagePct >= 70 ? 'bg-orange-400' : 'bg-emerald-500'}`}
+                style={{ width: `${usagePct}%` }}
+              />
+            </div>
+            <span>
+              {usagePct}% · {state.plans[state.user.plan].name}
+            </span>
+            {state.user.plan === 'free' && <span className="font-semibold text-amber-600">Upgrade</span>}
+          </button>
+
           {state.demoMode && (
             <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-700" title="Set ANTHROPIC_API_KEY on the server for real outputs">
               demo mode
@@ -75,7 +103,7 @@ export default function App() {
               )}
             </HeaderButton>
             <HeaderButton onClick={() => setUnlocksOpen(true)}>🏆</HeaderButton>
-            <HeaderButton onClick={() => store.set({ trayOpen: !store.trayOpen })}>
+            <HeaderButton onClick={() => store.set({ trayOpen: !store.trayOpen, menuOpen: false })}>
               📬
               {unseen > 0 && (
                 <span className="absolute -right-1.5 -top-1.5 rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
@@ -89,30 +117,44 @@ export default function App() {
             >
               {store.cosmeticsOff ? '🏢' : '📋'}
             </HeaderButton>
-            <HeaderButton onClick={() => setMenuOpen(!menuOpen)}>⚙️</HeaderButton>
+            <HeaderButton onClick={() => store.set({ menuOpen: !store.menuOpen, trayOpen: false })}>⚙️</HeaderButton>
             {store.trayOpen && <Tray />}
-            {menuOpen && (
-              <div className="absolute right-0 top-12 z-30 w-60 rounded-xl border border-stone-200 bg-white p-2 shadow-xl">
+            {store.menuOpen && (
+              <div className="absolute right-0 top-12 z-30 w-64 rounded-xl border border-stone-200 bg-white p-2 shadow-xl">
+                <div className="truncate px-3 py-1.5 text-xs font-semibold text-stone-400">{state.user.email}</div>
                 <a
                   href="/api/account/export"
                   download
-                  onClick={() => setMenuOpen(false)}
+                  onClick={() => store.set({ menuOpen: false })}
                   className="block rounded-lg px-3 py-2 text-sm text-stone-700 hover:bg-stone-50"
                 >
                   ⬇️ Export all my data (JSON)
                 </a>
+                <button
+                  onClick={() => store.set({ privacyOpen: true, menuOpen: false })}
+                  className="block w-full rounded-lg px-3 py-2 text-left text-sm text-stone-700 hover:bg-stone-50"
+                >
+                  🔒 How we handle your data
+                </button>
                 <button onClick={wipe} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50">
                   🗑️ Delete all my data
                 </button>
-                <div className="mt-1 border-t border-stone-100 px-3 py-2 text-[11px] leading-snug text-stone-400">
-                  Your task inputs & outputs stay in the local database and are sent only to the AI provider to generate
-                  results. Don’t paste regulated data.
-                </div>
+                <button
+                  onClick={() => store.logout()}
+                  className="mt-1 block w-full rounded-lg border-t border-stone-100 px-3 py-2 text-left text-sm text-stone-700 hover:bg-stone-50"
+                >
+                  👋 Sign out
+                </button>
               </div>
             )}
           </nav>
         </div>
       </header>
+
+      {/* click-outside closes header dropdowns */}
+      {anyDropdownOpen && (
+        <div className="fixed inset-0 z-20" onClick={() => store.set({ trayOpen: false, menuOpen: false })} />
+      )}
 
       <main className="mx-auto max-w-5xl px-4 pt-6">
         {state.agents.length === 0 && (
@@ -137,6 +179,8 @@ export default function App() {
       {store.agentModalId && <AgentModal />}
       {store.resultTaskId && <ResultPanel />}
       {store.boardroomOpen && <Boardroom />}
+      {store.upgradeOpen && <UpgradeModal />}
+      {store.privacyOpen && <PrivacyModal />}
       {unlocksOpen && <Unlocks onClose={() => setUnlocksOpen(false)} />}
 
       {/* toasts */}

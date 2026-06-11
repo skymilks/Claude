@@ -1,6 +1,6 @@
 // XP and unlocks are tied to valuable usage — completing meaningful tasks,
 // acting on outputs, running the Boardroom — never raw API volume.
-import { db, uid, now, OWNER_ID } from './db.js';
+import { db, uid, now } from './db.js';
 
 export const XP = { taskDone: 10, boardroomDone: 25, actedOn: 15 };
 
@@ -18,8 +18,8 @@ export function nextLevelXp(xp) {
   return next ?? null;
 }
 
-export function companyXp() {
-  return db.prepare(`SELECT COALESCE(SUM(xp), 0) AS xp FROM agents WHERE ownerId = ?`).get(OWNER_ID).xp;
+export function companyXp(ownerId) {
+  return db.prepare(`SELECT COALESCE(SUM(xp), 0) AS xp FROM agents WHERE ownerId = ?`).get(ownerId).xp;
 }
 
 export const UNLOCK_DEFS = [
@@ -45,16 +45,16 @@ export function addXp(agentId, amount) {
 
 // Checks every unlock condition against current state and inserts any newly
 // earned rows. Cheap at this scale; runs after hires, completions, and acts.
-export function evaluateUnlocks() {
-  const owned = new Set(db.prepare(`SELECT key FROM unlocks WHERE ownerId = ?`).all(OWNER_ID).map((r) => r.key));
-  const agentCount = db.prepare(`SELECT COUNT(*) AS n FROM agents WHERE ownerId = ?`).get(OWNER_ID).n;
-  const roleCount = db.prepare(`SELECT COUNT(DISTINCT role) AS n FROM agents WHERE ownerId = ?`).get(OWNER_ID).n;
-  const doneCount = db.prepare(`SELECT COUNT(*) AS n FROM tasks WHERE ownerId = ? AND status = 'done'`).get(OWNER_ID).n;
-  const actedCount = db.prepare(`SELECT COUNT(*) AS n FROM tasks WHERE ownerId = ? AND actedAt IS NOT NULL`).get(OWNER_ID).n;
+export function evaluateUnlocks(ownerId) {
+  const owned = new Set(db.prepare(`SELECT key FROM unlocks WHERE ownerId = ?`).all(ownerId).map((r) => r.key));
+  const agentCount = db.prepare(`SELECT COUNT(*) AS n FROM agents WHERE ownerId = ?`).get(ownerId).n;
+  const roleCount = db.prepare(`SELECT COUNT(DISTINCT role) AS n FROM agents WHERE ownerId = ?`).get(ownerId).n;
+  const doneCount = db.prepare(`SELECT COUNT(*) AS n FROM tasks WHERE ownerId = ? AND status = 'done'`).get(ownerId).n;
+  const actedCount = db.prepare(`SELECT COUNT(*) AS n FROM tasks WHERE ownerId = ? AND actedAt IS NOT NULL`).get(ownerId).n;
   const boardroomCount = db
     .prepare(`SELECT COUNT(*) AS n FROM tasks WHERE ownerId = ? AND kind = 'boardroom' AND status = 'done'`)
-    .get(OWNER_ID).n;
-  const level = levelFromXp(companyXp());
+    .get(ownerId).n;
+  const level = levelFromXp(companyXp(ownerId));
 
   const earned = {
     first_hire: agentCount >= 1,
@@ -74,7 +74,7 @@ export function evaluateUnlocks() {
   for (const def of UNLOCK_DEFS) {
     if (earned[def.key] && !owned.has(def.key)) {
       db.prepare(`INSERT INTO unlocks (id, ownerId, type, key, unlockedAt) VALUES (?, ?, ?, ?, ?)`).run(
-        uid(), OWNER_ID, def.type, def.key, now()
+        uid(), ownerId, def.type, def.key, now()
       );
       fresh.push(def);
     }
@@ -82,6 +82,6 @@ export function evaluateUnlocks() {
   return fresh;
 }
 
-export function hasUnlock(key) {
-  return !!db.prepare(`SELECT 1 FROM unlocks WHERE ownerId = ? AND key = ?`).get(OWNER_ID, key);
+export function hasUnlock(ownerId, key) {
+  return !!db.prepare(`SELECT 1 FROM unlocks WHERE ownerId = ? AND key = ?`).get(ownerId, key);
 }

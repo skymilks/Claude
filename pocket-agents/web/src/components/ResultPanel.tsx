@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../store';
-import { api } from '../api';
+import { api, ApiError } from '../api';
 import { Modal, ModalHeader } from './Modal';
 import { Markdown } from './Markdown';
 import { agentById, taskById } from '../selectors';
@@ -23,7 +23,8 @@ export function ResultPanel() {
       }
       await refresh();
     } catch (err) {
-      toast({ icon: '⚠️', title: 'Action failed', body: (err as Error).message });
+      if (err instanceof ApiError && err.code === 'over_cap') set({ upgradeOpen: true });
+      else toast({ icon: '⚠️', title: 'Action failed', body: (err as Error).message });
     }
   };
 

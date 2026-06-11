@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../store';
-import { api } from '../api';
+import { api, ApiError } from '../api';
 import { Modal, ModalHeader } from './Modal';
 import { Sprite } from '../pixel/Sprite';
 import { character } from '../pixel/sprites';
@@ -28,7 +28,8 @@ export function AgentModal() {
       setValues({});
       await refresh();
     } catch (err) {
-      toast({ icon: '⚠️', title: 'Could not assign', body: (err as Error).message });
+      if (err instanceof ApiError && err.code === 'over_cap') set({ upgradeOpen: true });
+      else toast({ icon: '⚠️', title: 'Could not assign', body: (err as Error).message });
     } finally {
       setBusy(false);
     }

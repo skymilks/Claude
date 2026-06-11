@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { api } from './api';
+import { api, ApiError } from './api';
 import { ding } from './audio';
 import type { ServerState, Template, Task } from './types';
 
@@ -9,6 +9,7 @@ type Store = {
   state: ServerState | null;
   templates: Template[];
   toasts: Toast[];
+  authed: boolean | null; // null = still checking the session
   cosmeticsOff: boolean;
   // ui
   hireOpen: boolean;
@@ -16,9 +17,14 @@ type Store = {
   resultTaskId: string | null;
   boardroomOpen: boolean;
   trayOpen: boolean;
+  menuOpen: boolean;
+  upgradeOpen: boolean;
+  privacyOpen: boolean;
 
   init: () => Promise<void>;
   refresh: () => Promise<void>;
+  afterAuth: () => Promise<void>;
+  logout: () => Promise<void>;
   toast: (t: Omit<Toast, 'id'>) => void;
   dismissToast: (id: number) => void;
   set: (partial: Partial<Store>) => void;
@@ -34,12 +40,16 @@ export const useStore = create<Store>((set, get) => ({
   state: null,
   templates: [],
   toasts: [],
+  authed: null,
   cosmeticsOff: localStorage.getItem('cosmeticsOff') === '1',
   hireOpen: false,
   agentModalId: null,
   resultTaskId: null,
   boardroomOpen: false,
   trayOpen: false,
+  menuOpen: false,
+  upgradeOpen: false,
+  privacyOpen: false,
 
   set: (partial) => {
     if ('cosmeticsOff' in partial) localStorage.setItem('cosmeticsOff', partial.cosmeticsOff ? '1' : '0');
@@ -49,18 +59,48 @@ export const useStore = create<Store>((set, get) => ({
   init: async () => {
     if (initialized) return;
     initialized = true;
-    const [templates, state] = await Promise.all([api.templates(), api.state()]);
-    prevStatuses = new Map(state.tasks.map((t) => [t.id, t.status]));
-    prevUnlockKeys = new Set(state.unlocks.map((u) => u.key));
-    set({ templates, state });
+    api.templates().then((templates) => set({ templates })).catch(() => {});
+    await get().afterAuth();
     setInterval(() => get().refresh(), 2500);
   },
 
+  // Fetch (or re-fetch after login) the full state and prime the diff maps so
+  // we don't toast about history from before this session.
+  afterAuth: async () => {
+    try {
+      const state = await api.state();
+      prevStatuses = new Map(state.tasks.map((t) => [t.id, t.status]));
+      prevUnlockKeys = new Set(state.unlocks.map((u) => u.key));
+      set({ state, authed: true });
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) set({ authed: false, state: null });
+    }
+  },
+
+  logout: async () => {
+    await api.logout().catch(() => {});
+    prevStatuses = null;
+    prevUnlockKeys = null;
+    set({
+      authed: false,
+      state: null,
+      menuOpen: false,
+      trayOpen: false,
+      hireOpen: false,
+      agentModalId: null,
+      resultTaskId: null,
+      boardroomOpen: false,
+      upgradeOpen: false,
+    });
+  },
+
   refresh: async () => {
+    if (get().authed === false) return;
     let next: ServerState;
     try {
       next = await api.state();
-    } catch {
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) set({ authed: false, state: null });
       return; // transient network blip; next poll will recover
     }
 
@@ -95,7 +135,7 @@ export const useStore = create<Store>((set, get) => ({
     }
     prevUnlockKeys = new Set(next.unlocks.map((u) => u.key));
 
-    set({ state: next });
+    set({ state: next, authed: true });
   },
 
   toast: ({ icon, title, body }) => {
