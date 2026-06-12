@@ -11,6 +11,9 @@ export type Field = {
 // task form with realistic values tailored to the business.
 export type StarterTask = { label: string; input: Record<string, string> };
 
+// A standing weekly job the agent runs on its own.
+export type Routine = { label: string; freq: 'weekly'; input: Record<string, string>; nextRunAt?: string };
+
 export type Agent = {
   id: string;
   templateId: string;
@@ -20,6 +23,7 @@ export type Agent = {
   tagline: string | null;
   inputSchema: Field[];
   suggestions: StarterTask[];
+  routine: Routine | null;
   outputFormat: string;
   modelTier: 'standard' | 'premium';
   level: number;
@@ -81,11 +85,21 @@ export type Plan = { name: string; tokenCap: number };
 
 export type ServerState = {
   user: {
-    email: string;
+    email: string | null; // null for client offices entered via link
     plan: 'free' | 'pro';
     usageThisPeriod: number;
     tokenCap: number;
     periodStart: string | null;
+  };
+  // Whose office this is. Client workspaces carry the business info the
+  // founder preloaded; needsIntake drives the first-run team setup.
+  workspace: {
+    kind: 'user' | 'demo';
+    name: string | null;
+    company: string | null;
+    brief: string | null;
+    welcomeLine: string | null;
+    needsIntake: boolean;
   };
   plans: { free: Plan; pro: Plan };
   agents: Agent[];
@@ -100,7 +114,7 @@ export type ServerState = {
   now: string;
 };
 
-// --- Prospect demo offices (the founder's done-for-you closing tool) ---
+// --- Drafted agents (intake + empty-desk builder) and client offices ---
 
 export type DraftAgent = {
   displayName: string;
@@ -110,9 +124,11 @@ export type DraftAgent = {
   systemPrompt: string;
   inputSchema: Field[];
   starterTasks: StarterTask[];
+  routine?: Routine | null;
 };
 
-export type ProspectDraft = {
+// The intake's proposed team, reviewed and approved by the owner.
+export type IntakeDraft = {
   brief: string;
   welcomeLine: string;
   agents: DraftAgent[];
@@ -123,26 +139,8 @@ export type ProspectListItem = {
   name: string;
   company: string;
   url: string;
-  runsUsed: number;
-  runCap: number;
   createdAt: string;
-  interestedAt: string | null;
-  interestNote: string | null;
-};
-
-export type DemoState = {
-  prospect: {
-    name: string;
-    company: string;
-    brief: string | null;
-    welcomeLine: string | null;
-    ctaUrl: string | null;
-  };
-  agents: Agent[];
-  tasks: Task[];
-  demoRunsUsed: number;
-  demoRunCap: number;
-  interested: boolean;
-  demoMode: boolean;
-  now: string;
+  agentCount: number;
+  tasksDone: number;
+  tokensUsed: number;
 };

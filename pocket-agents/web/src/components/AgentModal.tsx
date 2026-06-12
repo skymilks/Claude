@@ -9,10 +9,16 @@ import type { Field, StarterTask } from '../types';
 
 const STATUS_ICON: Record<string, string> = { queued: '🕐', running: '⚙️', done: '✅', failed: '⚠️' };
 
+const inDays = (iso: string): string => {
+  const days = Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000));
+  return days === 0 ? 'today' : days === 1 ? 'tomorrow' : `in ${days} days`;
+};
+
 export function AgentModal() {
   const { state, agentModalId, set, refresh, toast, openResult } = useStore();
   const [values, setValues] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [weekly, setWeekly] = useState(false);
   const agent = state ? agentById(state, agentModalId) : undefined;
   if (!state || !agent) return null;
 
@@ -24,8 +30,15 @@ export function AgentModal() {
     setBusy(true);
     try {
       const task = await api.createTask(agent.id, values);
+      // "Repeat weekly" turns this same brief into a standing routine the
+      // agent runs on its own from next week.
+      if (weekly) {
+        const label = (Object.values(values).find(Boolean) ?? 'Weekly job').slice(0, 60);
+        await api.setRoutine(agent.id, { label, freq: 'weekly', input: values }).catch(() => {});
+      }
       toast({ icon: '📋', title: `${agent.displayName} is on it`, body: `Est. ~${task.estimatedSeconds}s — runs in the background` });
       setValues({});
+      setWeekly(false);
       await refresh();
     } catch (err) {
       if (err instanceof ApiError && err.code === 'over_cap') set({ upgradeOpen: true });
@@ -33,6 +46,11 @@ export function AgentModal() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const stopRoutine = async () => {
+    await api.clearRoutine(agent.id).catch(() => {});
+    await refresh();
   };
 
   return (
@@ -53,6 +71,17 @@ export function AgentModal() {
         onClose={close}
       />
       <div className="max-h-[70vh] overflow-y-auto p-6">
+        {agent.routine && (
+          <div className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+            <span className="flex-1">
+              ↻ Every week, unasked: <span className="font-semibold">{agent.routine.label}</span>
+              {agent.routine.nextRunAt && <span className="text-emerald-600"> · next {inDays(agent.routine.nextRunAt)}</span>}
+            </span>
+            <button onClick={stopRoutine} className="rounded bg-white px-2 py-1 text-xs font-semibold text-emerald-700 shadow-sm hover:bg-emerald-100">
+              Stop
+            </button>
+          </div>
+        )}
         {active ? (
           <div className="rounded-xl border border-sky-200 bg-sky-50 p-4">
             <div className="flex items-center gap-2 font-semibold text-sky-800">
@@ -72,6 +101,12 @@ export function AgentModal() {
             {agent.inputSchema.map((field) => (
               <FieldInput key={field.key} field={field} value={values[field.key] ?? ''} onChange={(v) => setValues({ ...values, [field.key]: v })} />
             ))}
+            {agent.role !== 'ceo' && (
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-stone-600">
+                <input type="checkbox" checked={weekly} onChange={(e) => setWeekly(e.target.checked)} className="accent-emerald-600" />
+                ↻ Repeat this every week without asking{agent.routine ? ' (replaces the current routine)' : ''}
+              </label>
+            )}
             <button
               onClick={assign}
               disabled={busy}

@@ -5,7 +5,6 @@
 import { Router } from 'express';
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { db, uid, now } from './db.js';
-import { seatStarterTeam } from './hire.js';
 
 const COOKIE = 'pa_session';
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -40,7 +39,9 @@ function setSessionCookie(res, token, maxAgeSeconds) {
   res.setHeader('Set-Cookie', `${COOKIE}=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAgeSeconds}${secure}`);
 }
 
-function startSession(res, userId) {
+// Also used by the client-office link route: visiting /office/:token starts a
+// normal session for that workspace, so the link IS their real sign-in.
+export function startSession(res, userId) {
   const token = randomBytes(32).toString('hex');
   db.prepare(`INSERT INTO sessions (token, userId, createdAt, expiresAt) VALUES (?, ?, ?, ?)`).run(
     token, userId, now(), new Date(Date.now() + SESSION_TTL_MS).toISOString()
@@ -108,9 +109,8 @@ authRoutes.post('/api/auth/signup', (req, res) => {
     `INSERT INTO users (id, email, plan, usageThisPeriod, createdAt, passwordHash, periodStart) VALUES (?, ?, 'free', 0, ?, ?, ?)`
   ).run(userId, email, now(), hashPassword(password), now());
   adoptLegacyData(userId);
-  // Unless legacy data brought a team along, seat the starter trio so the
-  // first thing a new account sees is a working office, not empty desks.
-  if (!db.prepare(`SELECT 1 FROM agents WHERE ownerId = ?`).get(userId)) seatStarterTeam(userId);
+  // No pre-picked team: the first visit runs the intake — the Chief of Staff
+  // asks about their biggest pain points and proposes a team they approve.
   startSession(res, userId);
   res.json({ ok: true });
 });

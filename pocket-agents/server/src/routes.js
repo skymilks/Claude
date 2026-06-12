@@ -5,11 +5,11 @@ import { templateById } from './templates.js';
 import { demoMode, MODELS, friendlyApiError } from './claude.js';
 import { estimateSeconds, boardroomStatus, queueBoardroom } from './queue.js';
 import { addXp, evaluateUnlocks, UNLOCK_DEFS, levelFromXp, nextLevelXp, companyXp, XP } from './progression.js';
-import { requireAuth, requireAdmin, isAdminUserId, hashPassword } from './auth.js';
+import { requireAuth, requireAdmin, isAdminUserId, hashPassword, startSession } from './auth.js';
 import { PLANS, planOf, ensurePeriod, overCap } from './plans.js';
-import { draftProspectOffice, draftCustomAgent, sanitizeAgentConfigs } from './prospects.js';
+import { draftTeam, draftCustomAgent, sanitizeAgentConfigs, validateRoutine } from './prospects.js';
 import { fetchSiteText } from './fetchsite.js';
-import { insertAgent, hireFromTemplate, freeWorkerSlot, seatStarterTeam } from './hire.js';
+import { insertAgent, hireFromTemplate, freeWorkerSlot, WORKER_SLOTS } from './hire.js';
 
 export const routes = Router();
 
@@ -20,6 +20,7 @@ const agentToJson = (a) => ({
   ...a,
   inputSchema: JSON.parse(a.inputSchema),
   suggestions: a.suggestions ? JSON.parse(a.suggestions) : [],
+  routine: a.routine ? JSON.parse(a.routine) : null,
   systemPrompt: undefined,
 });
 const taskToJson = (t) => ({ ...t, input: t.input ? JSON.parse(t.input) : null });
@@ -36,75 +37,16 @@ function collectTaskInput(agent, input) {
   return { values };
 }
 
-function queueAgentTask(ownerId, agent, values) {
-  const title = (Object.values(values)[0] || 'Task').slice(0, 80);
-  const inputChars = Object.values(values).join('').length;
-  const id = uid();
-  db.prepare(
-    `INSERT INTO tasks (id, ownerId, agentId, kind, title, input, status, estimatedSeconds, createdAt)
-     VALUES (?, ?, ?, 'task', ?, ?, 'queued', ?, ?)`
-  ).run(id, ownerId, agent.id, title, JSON.stringify(values), estimateSeconds(agent.modelTier, inputChars), now());
-  return id;
-}
-
 // ---------------------------------------------------------------------------
-// Prospect demo offices (no auth — reached via an unguessable token link).
-// A prospect clicks the link, lands in their pre-built office, and can try a
-// limited number of real agent runs before the "claim your office" CTA.
-const DEMO_RUN_CAP = Number(process.env.DEMO_RUN_CAP || 3);
-const demoByToken = (token) => db.prepare(`SELECT * FROM users WHERE demoToken = ? AND kind = 'demo'`).get(token);
-
-routes.get('/api/demo/:token', (req, res) => {
-  const demo = demoByToken(req.params.token);
-  if (!demo) return res.status(404).json({ error: 'This demo link is no longer active.' });
-  const agents = db.prepare(`SELECT * FROM agents WHERE ownerId = ? ORDER BY deskSlot`).all(demo.id);
-  const tasks = db.prepare(`SELECT * FROM tasks WHERE ownerId = ? ORDER BY createdAt DESC LIMIT 20`).all(demo.id);
-  res.json({
-    prospect: {
-      name: demo.prospectName,
-      company: demo.prospectCompany,
-      brief: demo.prospectBrief,
-      welcomeLine: demo.welcomeLine,
-      ctaUrl: demo.ctaUrl,
-    },
-    agents: agents.map(agentToJson),
-    tasks: tasks.map(taskToJson),
-    demoRunsUsed: demo.demoRunsUsed,
-    demoRunCap: DEMO_RUN_CAP,
-    interested: !!demo.interestedAt,
-    demoMode,
-    now: now(),
-  });
-});
-
-// The warm close: a sold prospect raises their hand. No run cap — it's a
-// single flag behind the unguessable token; the founder sees it as 🔥 HOT.
-routes.post('/api/demo/:token/interested', (req, res) => {
-  const demo = demoByToken(req.params.token);
-  if (!demo) return res.status(404).json({ error: 'This demo link is no longer active.' });
-  const note = (req.body?.note ?? '').toString().trim().slice(0, 500);
-  db.prepare(`UPDATE users SET interestedAt = ?, interestNote = ? WHERE id = ?`).run(now(), note || null, demo.id);
+// Client office links (no auth — reached via an unguessable token). The link
+// IS the sign-in: visiting it starts a normal session for that workspace, so
+// the client gets the full product. No run caps, no claim CTAs — if it
+// doesn't work out, the founder revokes the workspace.
+routes.post('/api/office/:token/enter', (req, res) => {
+  const workspace = db.prepare(`SELECT * FROM users WHERE demoToken = ? AND kind = 'demo'`).get(req.params.token);
+  if (!workspace) return res.status(404).json({ error: 'This office link is no longer active.' });
+  startSession(res, workspace.id);
   res.json({ ok: true });
-});
-
-routes.post('/api/demo/:token/try', (req, res) => {
-  const demo = demoByToken(req.params.token);
-  if (!demo) return res.status(404).json({ error: 'This demo link is no longer active.' });
-  if (demo.demoRunsUsed >= DEMO_RUN_CAP) {
-    return res.status(402).json({ error: 'This demo office has used all its free runs.', code: 'demo_cap' });
-  }
-  const { agentId, input } = req.body ?? {};
-  const agent = getAgent(agentId, demo.id);
-  if (!agent) return res.status(404).json({ error: 'Agent not found' });
-  if (db.prepare(`SELECT 1 FROM tasks WHERE agentId = ? AND status IN ('queued','running')`).get(agent.id)) {
-    return res.status(409).json({ error: `${agent.displayName} is already working on something` });
-  }
-  const { values, error } = collectTaskInput(agent, input);
-  if (error) return res.status(400).json({ error });
-
-  const taskId = queueAgentTask(demo.id, agent, values);
-  db.prepare(`UPDATE users SET demoRunsUsed = demoRunsUsed + 1 WHERE id = ?`).run(demo.id);
-  res.json(taskToJson(getTask(taskId, demo.id)));
 });
 
 // Everything below is per-account.
@@ -124,6 +66,16 @@ routes.get('/api/state', (req, res) => {
       usageThisPeriod: user.usageThisPeriod,
       tokenCap: planOf(user).tokenCap,
       periodStart: user.periodStart,
+    },
+    // Who this office belongs to. Client workspaces carry the business info
+    // the founder preloaded; needsIntake drives the first-run team setup.
+    workspace: {
+      kind: user.kind ?? 'user',
+      name: user.prospectName ?? null,
+      company: user.prospectCompany ?? null,
+      brief: user.prospectBrief ?? null,
+      welcomeLine: user.welcomeLine ?? null,
+      needsIntake: agents.length === 0,
     },
     plans: { free: PLANS.free, pro: PLANS.pro },
     agents: agents.map(agentToJson),
@@ -179,6 +131,84 @@ routes.post('/api/agents/custom', (req, res) => {
   const id = insertAgent(req.userId, { ...config, templateId: 'custom', suggestions: config.starterTasks }, deskSlot);
   evaluateUnlocks(req.userId);
   res.json(agentToJson(db.prepare(`SELECT * FROM agents WHERE id = ?`).get(id)));
+});
+
+// ---------------------------------------------------------------------------
+// The intake: a new office's first run. The Chief of Staff asks the owner
+// what's eating their week; the answers (plus any business info the founder
+// preloaded) drive a drafted team the owner reviews and approves — nobody is
+// handed agents they didn't choose.
+
+routes.post('/api/intake/draft', async (req, res) => {
+  const user = db.prepare(`SELECT * FROM users WHERE id = ?`).get(req.userId);
+  const pains = (req.body?.pains ?? '').toString().trim().slice(0, 2000);
+  const handoff = (req.body?.handoff ?? '').toString().trim().slice(0, 2000);
+  const business = (req.body?.business ?? '').toString().trim().slice(0, 4000);
+  const description = user.prospectBrief || business;
+  if (!pains) return res.status(400).json({ error: 'Tell us at least one thing that eats your week' });
+  if (!description) return res.status(400).json({ error: 'Tell us a little about the business first' });
+  if (!capGate(req, res)) return;
+  try {
+    res.json(
+      await draftTeam({
+        name: user.prospectName || (user.email ?? '').split('@')[0] || 'there',
+        company: user.prospectCompany || 'your company',
+        description,
+        siteText: user.prospectSite || '',
+        pains,
+        handoff,
+      })
+    );
+  } catch (err) {
+    res.status(502).json({ error: friendlyApiError(err) });
+  }
+});
+
+// Seat the approved (possibly edited) team. Only valid while the office is
+// still empty — after that, hiring goes through the empty-desk builder.
+routes.post('/api/intake/accept', (req, res) => {
+  if (db.prepare(`SELECT 1 FROM agents WHERE ownerId = ?`).get(req.userId)) {
+    return res.status(409).json({ error: 'Your team is already seated' });
+  }
+  const agents = sanitizeAgentConfigs(req.body?.agents);
+  if (agents.length === 0) return res.status(400).json({ error: 'Approve at least one hire' });
+  agents.forEach((config, i) => {
+    insertAgent(
+      req.userId,
+      {
+        ...config,
+        templateId: 'custom',
+        suggestions: config.starterTasks,
+        // Approved routines start their weekly cadence now; the first
+        // scheduled run lands a week out (starter tasks cover today).
+        routine: config.routine
+          ? { ...config.routine, nextRunAt: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString() }
+          : null,
+      },
+      WORKER_SLOTS[i]
+    );
+  });
+  evaluateUnlocks(req.userId);
+  res.json({ ok: true });
+});
+
+// Standing weekly routines on an agent: set (or replace) and clear. The
+// owner can turn any task they liked into "do this every week".
+routes.put('/api/agents/:id/routine', (req, res) => {
+  const agent = getAgent(req.params.id, req.userId);
+  if (!agent) return res.status(404).json({ error: 'Agent not found' });
+  const routine = validateRoutine(req.body?.routine, JSON.parse(agent.inputSchema));
+  if (!routine) return res.status(400).json({ error: 'The routine needs a label and every required field filled' });
+  const stored = { ...routine, nextRunAt: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString() };
+  db.prepare(`UPDATE agents SET routine = ? WHERE id = ?`).run(JSON.stringify(stored), agent.id);
+  res.json(agentToJson(db.prepare(`SELECT * FROM agents WHERE id = ?`).get(agent.id)));
+});
+
+routes.delete('/api/agents/:id/routine', (req, res) => {
+  const agent = getAgent(req.params.id, req.userId);
+  if (!agent) return res.status(404).json({ error: 'Agent not found' });
+  db.prepare(`UPDATE agents SET routine = NULL WHERE id = ?`).run(agent.id);
+  res.json(agentToJson(db.prepare(`SELECT * FROM agents WHERE id = ?`).get(agent.id)));
 });
 
 // The paywall gate: new model work is blocked once the plan's monthly token
@@ -324,17 +354,16 @@ routes.delete('/api/account', (req, res) => {
   db.prepare(`DELETE FROM agents WHERE ownerId = ?`).run(req.userId);
   db.prepare(`DELETE FROM unlocks WHERE ownerId = ?`).run(req.userId);
   db.prepare(`UPDATE users SET usageThisPeriod = 0 WHERE id = ?`).run(req.userId);
-  // A reset workspace starts the way a new account does: team already seated.
-  seatStarterTeam(req.userId);
+  // A reset office starts the way a new one does: the intake runs again.
   res.json({ ok: true });
 });
 
 // ---------------------------------------------------------------------------
-// Founder tools (ADMIN_EMAILS accounts only): build a personalized demo
-// office for a prospect before you've even met them, then send the link.
+// Founder tools (ADMIN_EMAILS accounts only): set up a client's office before
+// you've met them. You preload who they are and what the business does (their
+// website is read for grounding); the client's own intake builds the team.
 
-// Step 1 — describe the business, get a tailored draft to review and tweak.
-routes.post('/api/admin/prospects/draft', requireAdmin, async (req, res) => {
+routes.post('/api/admin/prospects', requireAdmin, async (req, res) => {
   const name = (req.body?.name ?? '').trim();
   const company = (req.body?.company ?? '').trim();
   const description = (req.body?.description ?? '').trim();
@@ -343,7 +372,8 @@ routes.post('/api/admin/prospects/draft', requireAdmin, async (req, res) => {
     return res.status(400).json({ error: 'Name, company, and a business description are all required' });
   }
 
-  // Their public website grounds the draft in real services, city, customers.
+  // Their public website grounds the intake-time team draft in real services,
+  // city, and customers.
   let siteText = '';
   if (websiteUrl) {
     try {
@@ -353,66 +383,44 @@ routes.post('/api/admin/prospects/draft', requireAdmin, async (req, res) => {
     }
   }
 
-  try {
-    res.json(await draftProspectOffice({ name, company, description: description.slice(0, 4000), siteText }));
-  } catch (err) {
-    res.status(502).json({ error: friendlyApiError(err) });
-  }
-});
-
-// Step 2 — persist the (possibly edited) draft as a demo workspace + link.
-routes.post('/api/admin/prospects', requireAdmin, (req, res) => {
-  const { name, company, brief, welcomeLine, ctaUrl } = req.body ?? {};
-  const agents = sanitizeAgentConfigs(req.body?.agents);
-  if (!(name ?? '').trim() || !(company ?? '').trim()) return res.status(400).json({ error: 'Name and company are required' });
-  if (agents.length === 0) return res.status(400).json({ error: 'The office needs at least one agent' });
-
-  const demoId = uid();
+  const workspaceId = uid();
   const token = randomBytes(24).toString('base64url');
+  // Full product from day one: client offices live on the Pro plan — its
+  // monthly token budget is the only ceiling (cost protection, not a teaser).
   db.prepare(
     `INSERT INTO users (id, email, plan, usageThisPeriod, createdAt, periodStart, kind, demoToken,
-                        prospectName, prospectCompany, prospectBrief, welcomeLine, ctaUrl, demoRunsUsed, createdBy)
-     VALUES (?, NULL, 'free', 0, ?, ?, 'demo', ?, ?, ?, ?, ?, ?, 0, ?)`
+                        prospectName, prospectCompany, prospectBrief, prospectSite, createdBy)
+     VALUES (?, NULL, 'pro', 0, ?, ?, 'demo', ?, ?, ?, ?, ?, ?)`
   ).run(
-    demoId, now(), now(), token,
-    name.trim().slice(0, 80), company.trim().slice(0, 80), (brief ?? '').trim().slice(0, 1200),
-    (welcomeLine ?? '').trim().slice(0, 300), (ctaUrl ?? '').trim().slice(0, 300) || null, req.userId
+    workspaceId, now(), now(), token,
+    name.slice(0, 80), company.slice(0, 80), description.slice(0, 4000), siteText || null, req.userId
   );
-  agents.forEach((a, i) => {
-    insertAgent(demoId, { ...a, templateId: 'custom', suggestions: a.starterTasks }, i);
-  });
-  res.json({ id: demoId, token, url: `/demo/${token}` });
+  res.json({ id: workspaceId, token, url: `/office/${token}` });
 });
 
 routes.get('/api/admin/prospects', requireAdmin, (_req, res) => {
   const rows = db
-    .prepare(
-      `SELECT id, prospectName, prospectCompany, demoToken, demoRunsUsed, createdAt, interestedAt, interestNote
-       FROM users WHERE kind = 'demo' ORDER BY createdAt DESC`
-    )
+    .prepare(`SELECT id, prospectName, prospectCompany, demoToken, usageThisPeriod, createdAt FROM users WHERE kind = 'demo' ORDER BY createdAt DESC`)
     .all();
   res.json(
     rows.map((r) => ({
       id: r.id,
       name: r.prospectName,
       company: r.prospectCompany,
-      url: `/demo/${r.demoToken}`,
-      runsUsed: r.demoRunsUsed,
-      runCap: DEMO_RUN_CAP,
+      url: `/office/${r.demoToken}`,
       createdAt: r.createdAt,
-      interestedAt: r.interestedAt,
-      interestNote: r.interestNote,
+      agentCount: db.prepare(`SELECT COUNT(*) AS n FROM agents WHERE ownerId = ?`).get(r.id).n,
+      tasksDone: db.prepare(`SELECT COUNT(*) AS n FROM tasks WHERE ownerId = ? AND status = 'done'`).get(r.id).n,
+      tokensUsed: r.usageThisPeriod,
     }))
   );
 });
 
-// The handover: when a prospect says yes, their demo workspace BECOMES their
-// real account — same agents, same work history. The founder sets their login,
-// the demo link dies, and the client signs in at the main URL on the Pro plan
-// (the founder invoices directly; Stripe comes later).
+// When a client starts paying, their workspace gets a proper login: same
+// agents, same work history. The office link keeps working until you revoke.
 routes.post('/api/admin/prospects/:id/convert', requireAdmin, (req, res) => {
-  const demo = db.prepare(`SELECT id FROM users WHERE id = ? AND kind = 'demo'`).get(req.params.id);
-  if (!demo) return res.status(404).json({ error: 'Demo not found' });
+  const workspace = db.prepare(`SELECT id FROM users WHERE id = ? AND kind = 'demo'`).get(req.params.id);
+  if (!workspace) return res.status(404).json({ error: 'Workspace not found' });
   const email = (req.body?.email ?? '').trim().toLowerCase();
   const password = req.body?.password ?? '';
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Enter a valid email address' });
@@ -422,16 +430,18 @@ routes.post('/api/admin/prospects/:id/convert', requireAdmin, (req, res) => {
   }
   db.prepare(
     `UPDATE users SET kind = 'user', email = ?, passwordHash = ?, plan = 'pro', demoToken = NULL, periodStart = ? WHERE id = ?`
-  ).run(email, hashPassword(password), now(), demo.id);
+  ).run(email, hashPassword(password), now(), workspace.id);
   res.json({ ok: true });
 });
 
+// Revoking access: the workspace, its sessions, and everything in it go away.
 routes.delete('/api/admin/prospects/:id', requireAdmin, (req, res) => {
-  const demo = db.prepare(`SELECT id FROM users WHERE id = ? AND kind = 'demo'`).get(req.params.id);
-  if (!demo) return res.status(404).json({ error: 'Demo not found' });
-  db.prepare(`DELETE FROM tasks WHERE ownerId = ?`).run(demo.id);
-  db.prepare(`DELETE FROM agents WHERE ownerId = ?`).run(demo.id);
-  db.prepare(`DELETE FROM unlocks WHERE ownerId = ?`).run(demo.id);
-  db.prepare(`DELETE FROM users WHERE id = ?`).run(demo.id);
+  const workspace = db.prepare(`SELECT id FROM users WHERE id = ? AND kind = 'demo'`).get(req.params.id);
+  if (!workspace) return res.status(404).json({ error: 'Workspace not found' });
+  db.prepare(`DELETE FROM sessions WHERE userId = ?`).run(workspace.id);
+  db.prepare(`DELETE FROM tasks WHERE ownerId = ?`).run(workspace.id);
+  db.prepare(`DELETE FROM agents WHERE ownerId = ?`).run(workspace.id);
+  db.prepare(`DELETE FROM unlocks WHERE ownerId = ?`).run(workspace.id);
+  db.prepare(`DELETE FROM users WHERE id = ?`).run(workspace.id);
   res.json({ ok: true });
 });

@@ -10,7 +10,7 @@ export function OnboardingCard() {
 
   const steps = [
     {
-      label: 'Give an agent a task (your team is already seated)',
+      label: 'Give an agent a task (tap their desk)',
       done: state.tasks.length > 0,
       go: () => state.agents[0] && set({ agentModalId: state.agents[0].id }),
     },

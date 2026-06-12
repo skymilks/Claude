@@ -7,7 +7,7 @@ import { db, now, uid } from './db.js';
 import { runModel, friendlyApiError, demoMode } from './claude.js';
 import { CEO_SYSTEM, recentWorkBlock, ceoUserContent, boardroomUserContent } from './synthesis.js';
 import { addXp, evaluateUnlocks, hasUnlock, XP } from './progression.js';
-import { ensurePeriod } from './plans.js';
+import { ensurePeriod, overCap } from './plans.js';
 import { sweepExpiredSessions } from './auth.js';
 
 const CONCURRENCY = 2;
@@ -51,6 +51,7 @@ function tick() {
     privacySweep();
   }
   autoQueueBoardroom();
+  autoRunRoutines();
   while (active < CONCURRENCY) {
     const task = claimNext();
     if (!task) break;
@@ -175,9 +176,44 @@ export function queueBoardroom(ownerId, ceoAgentId) {
 // The scheduled ritual: once unlocked, a boardroom convenes weekly on the
 // server whenever there's enough fresh work — even with no tab open.
 function autoQueueBoardroom() {
-  // Prospect demo workspaces never convene boardrooms.
-  for (const { id } of db.prepare(`SELECT id FROM users WHERE COALESCE(kind, 'user') != 'demo'`).all()) {
+  for (const { id } of db.prepare(`SELECT id FROM users`).all()) {
     const status = boardroomStatus(id);
     if (status.canConvene && status.completedSinceLast >= 3) queueBoardroom(id, status.ceoAgentId);
+  }
+}
+
+// Standing weekly routines: agents with one do their job on schedule without
+// being asked — the deliverable just shows up in the tray. Skipped (and
+// pushed a day, not dropped) while the workspace is over its token budget or
+// the agent is mid-task.
+const ROUTINE_PERIODS_MS = { weekly: 7 * 24 * 3600 * 1000 };
+
+function autoRunRoutines() {
+  const due = db
+    .prepare(`SELECT * FROM agents WHERE routine IS NOT NULL`)
+    .all()
+    .filter((agent) => {
+      try {
+        return (JSON.parse(agent.routine).nextRunAt ?? '') <= now();
+      } catch {
+        return false;
+      }
+    });
+  for (const agent of due) {
+    const routine = JSON.parse(agent.routine);
+    const period = ROUTINE_PERIODS_MS[routine.freq] ?? ROUTINE_PERIODS_MS.weekly;
+    const busy = db.prepare(`SELECT 1 FROM tasks WHERE agentId = ? AND status IN ('queued','running')`).get(agent.id);
+    const blocked = busy || overCap(ensurePeriod(agent.ownerId));
+    const nextRunAt = new Date(Date.now() + (blocked ? 24 * 3600 * 1000 : period)).toISOString();
+    if (!blocked) {
+      db.prepare(
+        `INSERT INTO tasks (id, ownerId, agentId, kind, title, input, status, estimatedSeconds, createdAt)
+         VALUES (?, ?, ?, 'task', ?, ?, 'queued', ?, ?)`
+      ).run(
+        uid(), agent.ownerId, agent.id, routine.label.slice(0, 80), JSON.stringify(routine.input),
+        estimateSeconds(agent.modelTier, Object.values(routine.input).join('').length), now()
+      );
+    }
+    db.prepare(`UPDATE agents SET routine = ? WHERE id = ?`).run(JSON.stringify({ ...routine, nextRunAt }), agent.id);
   }
 }

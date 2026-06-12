@@ -88,9 +88,11 @@ function ensureColumn(table, column, ddl) {
 ensureColumn('users', 'passwordHash', 'passwordHash TEXT');
 ensureColumn('users', 'periodStart', 'periodStart TEXT');
 
-// Prospect demo workspaces (the "done-for-you" closing tool): a demo is a
-// users row with kind='demo' — no password, reached via an unguessable token
-// link, owning its own pre-built agents like any other workspace.
+// Client workspaces handed out as a link (kind='demo' for historical
+// reasons): a users row with no password, reached via an unguessable token,
+// owning its own agents like any other workspace. Full product, no caps
+// beyond the plan's token budget — the founder revokes access if it doesn't
+// work out.
 ensureColumn('users', 'kind', `kind TEXT NOT NULL DEFAULT 'user'`);
 ensureColumn('users', 'demoToken', 'demoToken TEXT');
 ensureColumn('users', 'prospectName', 'prospectName TEXT');
@@ -100,14 +102,19 @@ ensureColumn('users', 'welcomeLine', 'welcomeLine TEXT');
 ensureColumn('users', 'ctaUrl', 'ctaUrl TEXT');
 ensureColumn('users', 'demoRunsUsed', 'demoRunsUsed INTEGER NOT NULL DEFAULT 0');
 ensureColumn('users', 'createdBy', 'createdBy TEXT');
-// When a prospect raises their hand in the demo's warm close.
 ensureColumn('users', 'interestedAt', 'interestedAt TEXT');
 ensureColumn('users', 'interestNote', 'interestNote TEXT');
-// One-line role description shown in the hiring gallery / demo tour.
+// Text pulled from the client's public website at workspace creation; grounds
+// the intake-time team drafting in their real services and customers.
+ensureColumn('users', 'prospectSite', 'prospectSite TEXT');
+// One-line role description shown in the office tour / intake review.
 ensureColumn('agents', 'tagline', 'tagline TEXT');
 // Ready-to-run starter tasks ("ideas left on the desk"): JSON array of
 // { label, input } drafted alongside the agent, shown as one-tap prefills.
 ensureColumn('agents', 'suggestions', 'suggestions TEXT');
+// A standing weekly job the agent runs on its own: JSON
+// { label, freq: 'weekly', input, nextRunAt }.
+ensureColumn('agents', 'routine', 'routine TEXT');
 
 export const uid = () => randomUUID();
 export const now = () => new Date().toISOString();

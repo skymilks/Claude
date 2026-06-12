@@ -1,4 +1,4 @@
-import type { ServerState, Task, Agent, ProspectDraft, ProspectListItem, DemoState, DraftAgent } from './types';
+import type { ServerState, Task, Agent, ProspectListItem, DraftAgent, IntakeDraft } from './types';
 
 export class ApiError extends Error {
   status: number;
@@ -47,23 +47,26 @@ export const api = {
   convene: () => request<Task>('/api/boardroom/convene', { method: 'POST' }),
   wipeAccount: () => request<{ ok: true }>('/api/account', { method: 'DELETE' }),
 
-  // Founder tools: prospect demo offices.
-  draftProspect: (name: string, company: string, description: string, websiteUrl: string) =>
-    request<ProspectDraft>('/api/admin/prospects/draft', {
-      method: 'POST',
-      body: JSON.stringify({ name, company, description, websiteUrl }),
-    }),
-  createProspect: (payload: { name: string; company: string; brief: string; welcomeLine: string; ctaUrl: string; agents: DraftAgent[] }) =>
+  // The intake: pain points in, a proposed team out, approved team seated.
+  intakeDraft: (payload: { pains: string; handoff: string; business?: string }) =>
+    request<IntakeDraft>('/api/intake/draft', { method: 'POST', body: JSON.stringify(payload) }),
+  intakeAccept: (agents: DraftAgent[]) =>
+    request<{ ok: true }>('/api/intake/accept', { method: 'POST', body: JSON.stringify({ agents }) }),
+
+  // Standing weekly routines on an agent.
+  setRoutine: (agentId: string, routine: { label: string; freq: 'weekly'; input: Record<string, string> }) =>
+    request<Agent>(`/api/agents/${agentId}/routine`, { method: 'PUT', body: JSON.stringify({ routine }) }),
+  clearRoutine: (agentId: string) => request<Agent>(`/api/agents/${agentId}/routine`, { method: 'DELETE' }),
+
+  // Client office links: visiting one starts a normal session for that
+  // workspace — the link is the sign-in.
+  enterOffice: (token: string) => request<{ ok: true }>(`/api/office/${token}/enter`, { method: 'POST' }),
+
+  // Founder tools: client offices.
+  createProspect: (payload: { name: string; company: string; description: string; websiteUrl: string }) =>
     request<{ id: string; token: string; url: string }>('/api/admin/prospects', { method: 'POST', body: JSON.stringify(payload) }),
   listProspects: () => request<ProspectListItem[]>('/api/admin/prospects'),
   deleteProspect: (id: string) => request<{ ok: true }>(`/api/admin/prospects/${id}`, { method: 'DELETE' }),
   convertProspect: (id: string, email: string, password: string) =>
     request<{ ok: true }>(`/api/admin/prospects/${id}/convert`, { method: 'POST', body: JSON.stringify({ email, password }) }),
-
-  // Prospect-side demo experience (token link, no login).
-  demoState: (token: string) => request<DemoState>(`/api/demo/${token}`),
-  demoTry: (token: string, agentId: string, input: Record<string, string>) =>
-    request<Task>(`/api/demo/${token}/try`, { method: 'POST', body: JSON.stringify({ agentId, input }) }),
-  demoInterested: (token: string, note: string) =>
-    request<{ ok: true }>(`/api/demo/${token}/interested`, { method: 'POST', body: JSON.stringify({ note }) }),
 };

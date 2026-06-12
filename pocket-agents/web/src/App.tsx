@@ -13,26 +13,43 @@ import { AuthScreen } from './components/AuthScreen';
 import { UpgradeModal } from './components/UpgradeModal';
 import { PrivacyModal } from './components/PrivacyModal';
 import { OnboardingCard } from './components/OnboardingCard';
-import { DemoExperience } from './components/DemoExperience';
+import { IntakeWizard } from './components/IntakeWizard';
 import { ProspectsPanel } from './components/ProspectsPanel';
 import { unseenDone } from './selectors';
 
-// Prospect demo links (/demo/<token>) get their own no-login experience.
-const demoToken = location.pathname.match(/^\/demo\/([A-Za-z0-9_-]+)\/?$/)?.[1] ?? null;
+// Client office links (/office/<token>, with /demo/<token> still honored for
+// links already sent) sign the visitor straight into their real workspace.
+const officeToken = location.pathname.match(/^\/(?:office|demo)\/([A-Za-z0-9_-]+)\/?$/)?.[1] ?? null;
 
 export default function App() {
   const store = useStore();
   const { state, authed } = store;
   const [unlocksOpen, setUnlocksOpen] = useState(false);
   const [prospectsOpen, setProspectsOpen] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (demoToken) return; // the demo page never touches account state
+    if (officeToken) {
+      // The link IS the sign-in: start a session, then load the office at /.
+      api
+        .enterOffice(officeToken)
+        .then(() => location.replace('/'))
+        .catch((err) => setLinkError((err as Error).message));
+      return;
+    }
     store.init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (demoToken) return <DemoExperience token={demoToken} />;
+  if (officeToken) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[#f3e7d3] px-6 text-center">
+        <div className="font-pixel text-sm text-[#6b4f2e]">
+          {linkError ? linkError.toUpperCase() : 'UNLOCKING YOUR OFFICE…'}
+        </div>
+      </div>
+    );
+  }
 
   if (authed === null) {
     return (
@@ -65,6 +82,9 @@ export default function App() {
   };
 
   const anyDropdownOpen = store.trayOpen || store.menuOpen;
+
+  // First run: the Chief of Staff's intake takes over until a team is seated.
+  if (state.workspace.needsIntake) return <IntakeWizard />;
 
   return (
     <div className="min-h-screen bg-[#f3e7d3] pb-16">
@@ -106,8 +126,8 @@ export default function App() {
 
           <nav className="relative flex items-center gap-1.5">
             {state.isAdmin && (
-              <HeaderButton onClick={() => setProspectsOpen(true)} title="Build a personalized demo office for a prospect">
-                🏗️ Prospects
+              <HeaderButton onClick={() => setProspectsOpen(true)} title="Set up a client's office and send them the link">
+                🏗️ Clients
               </HeaderButton>
             )}
             <HeaderButton onClick={() => store.set({ builderOpen: true })} title="Describe a job — we draft the agent, you approve them">
@@ -138,7 +158,9 @@ export default function App() {
             {store.trayOpen && <Tray />}
             {store.menuOpen && (
               <div className="absolute right-0 top-12 z-30 w-64 rounded-xl border border-stone-200 bg-white p-2 shadow-xl">
-                <div className="truncate px-3 py-1.5 text-xs font-semibold text-stone-400">{state.user.email}</div>
+                <div className="truncate px-3 py-1.5 text-xs font-semibold text-stone-400">
+                  {state.user.email ?? `${state.workspace.company ?? 'Your'} office`}
+                </div>
                 <a
                   href="/api/account/export"
                   download
@@ -156,12 +178,14 @@ export default function App() {
                 <button onClick={wipe} className="block w-full rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50">
                   🗑️ Delete all my data
                 </button>
-                <button
-                  onClick={() => store.logout()}
-                  className="mt-1 block w-full rounded-lg border-t border-stone-100 px-3 py-2 text-left text-sm text-stone-700 hover:bg-stone-50"
-                >
-                  👋 Sign out
-                </button>
+                {state.user.email && (
+                  <button
+                    onClick={() => store.logout()}
+                    className="mt-1 block w-full rounded-lg border-t border-stone-100 px-3 py-2 text-left text-sm text-stone-700 hover:bg-stone-50"
+                  >
+                    👋 Sign out
+                  </button>
+                )}
               </div>
             )}
           </nav>
@@ -174,21 +198,6 @@ export default function App() {
       )}
 
       <main className="mx-auto max-w-5xl px-4 pt-6">
-        {state.agents.length === 0 && (
-          <div className="mx-auto mb-6 max-w-xl rounded-2xl border border-amber-200 bg-white p-6 text-center shadow-sm">
-            <div className="font-pixel text-xs text-[#5d4326]">WELCOME, CEO</div>
-            <p className="mt-2 text-sm text-stone-600">
-              Your office is empty — describe a job in plain English and we'll draft your first agent. They do real
-              work; the office keeps it fun.
-            </p>
-            <button
-              onClick={() => store.set({ builderOpen: true })}
-              className="mt-4 rounded-xl bg-amber-600 px-6 py-3 font-semibold text-white shadow hover:bg-amber-700"
-            >
-              Create your first agent
-            </button>
-          </div>
-        )}
         <OnboardingCard />
         {store.cosmeticsOff ? <ListView /> : <Office />}
       </main>

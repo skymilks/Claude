@@ -1,8 +1,7 @@
 // Inserting an agent row is needed in three places — template hires, the
-// starter team seated at signup, and custom agents from the empty-desk
-// builder — so it lives here, importable by both auth and routes.
+// intake-approved team, and custom agents from the empty-desk builder — so it
+// lives here, importable by both auth and routes.
 import { db, uid, now } from './db.js';
-import { TEMPLATES } from './templates.js';
 import { CEO_SYSTEM } from './synthesis.js';
 
 // Desk slots: 0-2 the worker row, 3 the CEO's spot by the window, 4 the
@@ -17,12 +16,13 @@ export function freeWorkerSlot(ownerId) {
 export function insertAgent(ownerId, config, deskSlot) {
   const id = uid();
   db.prepare(
-    `INSERT INTO agents (id, ownerId, templateId, displayName, role, avatar, tagline, systemPrompt, inputSchema, outputFormat, modelTier, deskSlot, suggestions, hiredAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO agents (id, ownerId, templateId, displayName, role, avatar, tagline, systemPrompt, inputSchema, outputFormat, modelTier, deskSlot, suggestions, routine, hiredAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     id, ownerId, config.templateId, config.displayName, config.role, config.avatar, config.tagline,
     config.systemPrompt, JSON.stringify(config.inputSchema), config.outputFormat ?? 'markdown',
-    config.modelTier ?? 'standard', deskSlot, JSON.stringify(config.suggestions ?? []), now()
+    config.modelTier ?? 'standard', deskSlot, JSON.stringify(config.suggestions ?? []),
+    config.routine ? JSON.stringify(config.routine) : null, now()
   );
   return id;
 }
@@ -45,9 +45,3 @@ export function hireFromTemplate(ownerId, template, displayName, deskSlot) {
   );
 }
 
-// New accounts skip the hiring chore: the standard worker trio is already at
-// their desks on first sign-in. (The Chief of Staff stays an explicit hire —
-// they need team output to read.)
-export function seatStarterTeam(ownerId) {
-  TEMPLATES.filter((t) => t.role !== 'ceo').forEach((template, i) => hireFromTemplate(ownerId, template, null, i));
-}
