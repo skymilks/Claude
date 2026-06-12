@@ -143,3 +143,12 @@ An **agent** is a stored config (`displayName, avatar, role, systemPrompt, input
 - True orchestration: the CEO triggers fresh agent runs before synthesizing.
 - Web push for "ready" notifications (Service Worker + Push API; in-app tray is the baseline).
 - Supabase/Postgres migration for multi-instance deploys.
+
+## Art credits
+
+The office scene uses the **Modern Office** tileset by **LimeZu**
+(https://limezu.itch.io/moderninteriors). Used under its license (commercial
+use permitted; redistribution of the full pack is not) — so the repo ships only
+the specific tile slices the app renders, packed into
+`web/src/pixel/pack/office-atlas.png`. To swap art, regenerate that atlas from
+your own licensed copy. Character sprites are hand-rolled (`web/src/pixel`).

@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store';
 import { api } from '../api';
 import { OfficeScene, type SceneAgent } from './OfficeScene';
-import { STAGE_W, STAGE_H, tileAt, DESK_TILES, CEO_SLOT, standBeside } from '../pixel/iso';
+import { STAGE_W, STAGE_H, cellAt, DESK_CELLS, CEO_SLOT, standBeside } from '../pixel/grid';
 import { activeTaskFor, unseenDone, hasCosmetic, progressPct } from '../selectors';
 import type { Task } from '../types';
 
-// The office: PixiJS draws the isometric room (OfficeScene); this component
+// The office: PixiJS draws the top-down room (OfficeScene); this component
 // projects the interactive layer — click targets, nameplates, progress,
 // bubbles, empty-desk actions — onto the same grid coordinates, so the two
 // layers can never drift apart.
@@ -79,32 +79,24 @@ export function Office() {
       >
         <OfficeScene agents={sceneAgents} cosmetics={cosmetics} hostSlot={hostSlot} />
 
-        {/* interactive layer, projected onto the same iso grid */}
+        {/* interactive layer, projected onto the same top-down grid */}
         <div className="absolute inset-0">
-          {Object.entries(DESK_TILES).map(([slotStr, tile]) => {
+          {Object.entries(DESK_CELLS).map(([slotStr, cell]) => {
             const slot = Number(slotStr);
             const agent = agentsBySlot.get(slot);
-            const p = tileAt(tile.gx, tile.gy);
+            const p = cellAt(cell.cx, cell.cy);
             if (!agent) {
               const isCeoSlot = slot === CEO_SLOT;
               return (
                 <button
                   key={`ghost-${slot}`}
                   onClick={() => (isCeoSlot ? hireChief() : setStore({ builderOpen: true }))}
-                  className="group absolute -translate-x-1/2"
-                  style={{ left: p.x, top: p.y - 46, width: 150, height: 104 }}
+                  className="group absolute -translate-x-1/2 -translate-y-1/2"
+                  style={{ left: p.x, top: p.y, width: 168, height: 150 }}
                   title={isCeoSlot ? 'Bring in the Chief of Staff' : 'An empty desk — create your own agent for it'}
                 >
-                  {/* a chalk outline where a desk could go */}
-                  <div
-                    className="mx-auto h-[60px] w-[120px] border-[3px] border-dashed opacity-80 transition group-hover:opacity-100"
-                    style={{
-                      borderColor: '#8a6444',
-                      transform: 'rotateX(58deg) rotateZ(45deg)',
-                      borderRadius: 12,
-                    }}
-                  />
-                  <div className="font-pixel mt-0 text-center text-[9px] font-bold text-[#6d4f30] transition group-hover:text-amber-700">
+                  <div className="mx-auto h-[92px] w-[150px] rounded-xl border-[3px] border-dashed border-[#9a7a52]/70 bg-[#2a2218]/15 transition group-hover:border-amber-300 group-hover:bg-[#2a2218]/30" />
+                  <div className="font-pixel mt-1 text-center text-[9px] font-bold text-[#e6cfa6] drop-shadow-[0_1px_1px_rgba(0,0,0,0.6)] transition group-hover:text-amber-200">
                     {isCeoSlot ? '+ BRING IN THE CHIEF' : '+ CREATE YOUR OWN'}
                   </div>
                 </button>
@@ -119,7 +111,7 @@ export function Office() {
                 key={agent.id}
                 onClick={() => setStore({ agentModalId: agent.id })}
                 className="absolute -translate-x-1/2 text-left"
-                style={{ left: p.x, top: p.y - 118, width: 160, height: 196 }}
+                style={{ left: p.x, top: p.y - 104, width: 168, height: 176 }}
                 title={`${agent.displayName} — ${agent.tagline ?? agent.role}`}
               >
                 {bubble && (
@@ -180,11 +172,11 @@ function ChiefBubble({ slot, task, now }: { slot: number; task: Task; now: strin
           : 'Just polishing…';
 
   const pos = standBeside(slot);
-  const p = tileAt(pos.gx, pos.gy);
+  const p = cellAt(pos.cx, pos.cy);
   return (
     <div
       className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full"
-      style={{ left: p.x, top: p.y - 88 }}
+      style={{ left: p.x, top: p.y - 96 }}
     >
       <div className="relative max-w-[190px] rounded-xl border-2 border-[#5d4326] bg-white px-2.5 py-1.5 text-xs font-medium text-stone-700 shadow">
         {line}
