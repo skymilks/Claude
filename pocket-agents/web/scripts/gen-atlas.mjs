@@ -1,11 +1,12 @@
 // Regenerate web/src/pixel/pack/office-atlas.png from a licensed copy of
 // LimeZu's "Modern Office" pack. We never commit the raw pack — only the small
-// atlas of slices the app renders. Point SHEETS at your own pack, then:
+// atlas of sprites the app renders. Point this at your unzipped pack root:
 //   node web/scripts/gen-atlas.mjs /path/to/Modern_Office
-// Requires a headless Chromium (Playwright) to crop + repack with crisp pixels.
+// Requires Playwright's Chromium to compose with crisp pixels.
 //
-// FRAMES below are [sheet, sx, sy, sw, sh] in source px (32px tiles):
-//   mo = Modern_Office_32x32.png,  rb = 1_Room_Builder_Office/Room_Builder_Office_32x32.png
+// Furniture comes from the pack's named singles (4_Modern_Office_singles,
+// 32x32 set — each file is one sprite on a padded 64×96 canvas, which we
+// auto-trim). Floors and walls are sliced from the Room Builder sheet.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { chromium } from 'playwright';
 
@@ -15,57 +16,119 @@ if (!PACK) {
   process.exit(1);
 }
 
-const FRAMES = [
-  { name: 'floor',      rect: ['rb', 320, 224, 32, 32] },
-  { name: 'floorWood',  rect: ['rb', 416, 160, 32, 32] },
-  { name: 'wall',       rect: ['rb', 32, 224, 32, 64] },
-  { name: 'ws1',        rect: ['mo', 256, 1216, 64, 64] },
-  { name: 'ws2',        rect: ['mo', 320, 1216, 64, 64] },
-  { name: 'ws3',        rect: ['mo', 384, 1216, 64, 64] },
-  { name: 'deskTan',    rect: ['mo', 224, 896, 64, 64] },
-  { name: 'monitor',    rect: ['mo', 352, 256, 32, 32] },
-  { name: 'chair',      rect: ['mo', 0, 256, 32, 32] },
-  { name: 'chairOrange',rect: ['mo', 0, 320, 32, 32] },
-  { name: 'plantTall',  rect: ['mo', 160, 224, 32, 64] },
-  { name: 'plantSmall', rect: ['mo', 160, 320, 32, 64] },
-  { name: 'sofa',       rect: ['mo', 0, 544, 64, 64] },
-  { name: 'vending',    rect: ['mo', 0, 736, 32, 64] },
-  { name: 'bookshelf',  rect: ['mo', 192, 384, 32, 64] },
-  { name: 'poster',     rect: ['mo', 0, 384, 64, 64] },
-  { name: 'chart',      rect: ['mo', 192, 448, 64, 64] },
-  { name: 'printer',    rect: ['mo', 256, 576, 32, 64] },
-];
+// name → singles number (trimmed automatically)
+const SINGLES = {
+  ws1: 233,        // desk with tower PC + monitor + clutter
+  ws2: 235,        // desk set, second colorway
+  ws3: 327,        // desk with white monitor + papers
+  deskL: 249,      // L-shaped tan desk (the Chief's)
+  clutter: 227,    // dual-monitor desktop set, overlays a bare desk
+  chairBack: 101,  // black chair seen from behind (tucks under a south-facing desk)
+  chairFront: 102, // black chair facing the camera
+  chairOrange: 107,
+  waterCooler: 173,
+  vendingRed: 175,
+  vendingDark: 176,
+  whiteboard: 170, // blank presentation screen
+  chart: 172,      // line-chart board
+  poster: 164,     // pop-art four faces
+  certificate: 115,
+  smallFrame: 162,
+  plantA: 98,
+  plantB: 100,
+  lamp: 141,
+  papers: 155,
+  shelf: 156,
+  copier: 225,
+  sofa: 205,
+  lobbyChair: 196,
+  partitionPanel: 208, // glass partition panel (tiled between posts)
+  partitionPost: 207,
+  coffeeBar: 320,  // espresso setup on a table
+  rug: 90,         // red carpet mat
+  moneyPlant: 338,
+};
+
+// name → [sx, sy, sw, sh] slices from the Room Builder sheet (not trimmed)
+const SLICES = {
+  floor: [352, 160, 32, 32],      // light grey office tile
+  floorWood: [416, 160, 32, 32],  // light plank (the Chief's office)
+  wallWhite: [32, 352, 32, 64],   // white wall: cap + face
+  wallVert: [96, 352, 16, 64],    // narrow vertical wall strip
+};
 
 const dataUrl = (p) => 'data:image/png;base64,' + readFileSync(p).toString('base64');
-const MO = dataUrl(`${PACK}/Modern_Office_32x32.png`);
-const RB = dataUrl(`${PACK}/1_Room_Builder_Office/Room_Builder_Office_32x32.png`);
-
-const html = `<!doctype html><canvas id=c></canvas><script>
-function load(s){return new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.src=s;});}
-(async()=>{const mo=await load(window.__MO),rb=await load(window.__RB),sheets={mo,rb},FR=window.__FRAMES,PAD=1;
-let x=PAD,y=PAD,rowH=0;const placed={};
-for(const f of FR){const[,,,sw,sh]=f.rect;if(x+sw+PAD>512){x=PAD;y+=rowH+PAD;rowH=0;}placed[f.name]={x,y,w:sw,h:sh};x+=sw+PAD;rowH=Math.max(rowH,sh);}
-const H=y+rowH+PAD,c=document.getElementById('c');c.width=512;c.height=H;
-const g=c.getContext('2d');g.imageSmoothingEnabled=false;
-for(const f of FR){const[s,sx,sy,sw,sh]=f.rect;const p=placed[f.name];g.drawImage(sheets[s],sx,sy,sw,sh,p.x,p.y,sw,sh);}
-window.__OUT={png:c.toDataURL('image/png'),frames:placed,w:512,h:H};})();
-</script>`;
+const inputs = {
+  rb: dataUrl(`${PACK}/1_Room_Builder_Office/Room_Builder_Office_32x32.png`),
+  singles: Object.fromEntries(
+    Object.entries(SINGLES).map(([name, n]) => [
+      name,
+      dataUrl(`${PACK}/4_Modern_Office_singles/32x32/Modern_Office_Singles_32x32_${n}.png`),
+    ]),
+  ),
+};
 
 const b = await chromium.launch();
 const p = await b.newPage();
-await p.addInitScript((d) => { window.__FRAMES = d.fr; window.__MO = d.mo; window.__RB = d.rb; }, { fr: FRAMES, mo: MO, rb: RB });
-await p.setContent(html);
-await p.waitForFunction('window.__OUT');
-const out = await p.evaluate(() => window.__OUT);
+await p.setContent('<canvas id=c></canvas>');
+const out = await p.evaluate(
+  async ({ inputs, SLICES }) => {
+    const load = (s) => new Promise((r) => { const i = new Image(); i.onload = () => r(i); i.src = s; });
+    const scratch = document.createElement('canvas');
+    const sg = scratch.getContext('2d', { willReadFrequently: true });
+
+    // trim transparent padding → {img, sx, sy, w, h}
+    const trim = (img) => {
+      scratch.width = img.width; scratch.height = img.height;
+      sg.clearRect(0, 0, img.width, img.height);
+      sg.drawImage(img, 0, 0);
+      const d = sg.getImageData(0, 0, img.width, img.height).data;
+      let x0 = img.width, y0 = img.height, x1 = -1, y1 = -1;
+      for (let y = 0; y < img.height; y++)
+        for (let x = 0; x < img.width; x++)
+          if (d[(y * img.width + x) * 4 + 3] > 0) {
+            if (x < x0) x0 = x; if (x > x1) x1 = x;
+            if (y < y0) y0 = y; if (y > y1) y1 = y;
+          }
+      return { img, sx: x0, sy: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+    };
+
+    const rb = await load(inputs.rb);
+    const items = [];
+    for (const [name, src] of Object.entries(inputs.singles)) items.push({ name, ...trim(await load(src)) });
+    for (const [name, [sx, sy, sw, sh]] of Object.entries(SLICES)) items.push({ name, img: rb, sx, sy, w: sw, h: sh });
+
+    // shelf-pack into a 512-wide atlas, tallest first
+    items.sort((a, b2) => b2.h - a.h);
+    const PAD = 1;
+    let x = PAD, y = PAD, rowH = 0;
+    const frames = {};
+    for (const it of items) {
+      if (x + it.w + PAD > 512) { x = PAD; y += rowH + PAD; rowH = 0; }
+      frames[it.name] = [x, y, it.w, it.h];
+      it.dx = x; it.dy = y;
+      x += it.w + PAD; rowH = Math.max(rowH, it.h);
+    }
+    const H = y + rowH + PAD;
+    const c = document.getElementById('c');
+    c.width = 512; c.height = H;
+    const g = c.getContext('2d');
+    g.imageSmoothingEnabled = false;
+    for (const it of items) g.drawImage(it.img, it.sx, it.sy, it.w, it.h, it.dx, it.dy, it.w, it.h);
+    return { png: c.toDataURL('image/png'), frames, w: 512, h: H };
+  },
+  { inputs, SLICES },
+);
 await b.close();
 
 const here = new URL('.', import.meta.url).pathname;
 writeFileSync(`${here}../src/pixel/pack/office-atlas.png`, Buffer.from(out.png.split(',')[1], 'base64'));
-const frames = Object.fromEntries(Object.entries(out.frames).map(([k, v]) => [k, [v.x, v.y, v.w, v.h]]));
-writeFileSync(`${here}../src/pixel/pack/atlas.ts`,
-  `// Generated atlas of LimeZu "Modern Office" tiles (only what we render).\n` +
-  `// Art © LimeZu — commercial use OK, redistribution of the full pack is not,\n` +
-  `// so we ship just these slices. Regenerate with web/scripts/gen-atlas.mjs.\n` +
-  `export const ATLAS = { w: ${out.w}, h: ${out.h} };\n` +
-  `export const FRAMES: Record<string, [number, number, number, number]> = ${JSON.stringify(frames, null, 2)};\n`);
-console.log('wrote atlas', out.w + 'x' + out.h, Object.keys(frames).length, 'frames');
+writeFileSync(
+  `${here}../src/pixel/pack/atlas.ts`,
+  `// Generated atlas of LimeZu "Modern Office" sprites (only what we render).\n` +
+    `// Art © LimeZu — commercial use OK, redistribution of the full pack is not,\n` +
+    `// so we ship just these slices. Regenerate with web/scripts/gen-atlas.mjs.\n` +
+    `export const ATLAS = { w: ${out.w}, h: ${out.h} };\n` +
+    `export const FRAMES: Record<string, [number, number, number, number]> = ${JSON.stringify(out.frames, null, 2)};\n`,
+);
+console.log('wrote atlas', out.w + 'x' + out.h, Object.keys(out.frames).length, 'frames');

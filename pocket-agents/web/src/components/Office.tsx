@@ -75,7 +75,7 @@ export function Office() {
     <div ref={containerRef} className="mx-auto w-full max-w-[900px]" style={{ height: STAGE_H * fit }}>
       <div
         className="relative overflow-hidden rounded-xl"
-        style={{ width: STAGE_W, height: STAGE_H, transform: `scale(${fit})`, transformOrigin: 'top left', background: '#262017' }}
+        style={{ width: STAGE_W, height: STAGE_H, transform: `scale(${fit})`, transformOrigin: 'top left', background: '#3f3f55' }}
       >
         <OfficeScene agents={sceneAgents} cosmetics={cosmetics} hostSlot={hostSlot} />
 
@@ -95,8 +95,8 @@ export function Office() {
                   style={{ left: p.x, top: p.y, width: 168, height: 150 }}
                   title={isCeoSlot ? 'Bring in the Chief of Staff' : 'An empty desk — create your own agent for it'}
                 >
-                  <div className="mx-auto h-[92px] w-[150px] rounded-xl border-[3px] border-dashed border-[#9a7a52]/70 bg-[#2a2218]/15 transition group-hover:border-amber-300 group-hover:bg-[#2a2218]/30" />
-                  <div className="font-pixel mt-1 text-center text-[9px] font-bold text-[#e6cfa6] drop-shadow-[0_1px_1px_rgba(0,0,0,0.6)] transition group-hover:text-amber-200">
+                  <div className="mx-auto h-[92px] w-[150px] rounded-xl border-[3px] border-dashed border-amber-500/80 bg-amber-100/10 transition group-hover:border-amber-300 group-hover:bg-amber-100/20" />
+                  <div className="font-pixel mt-1 text-center text-[9px] font-bold text-amber-100 drop-shadow-[0_1px_1px_rgba(0,0,0,0.7)] transition group-hover:text-amber-200">
                     {isCeoSlot ? '+ BRING IN THE CHIEF' : '+ CREATE YOUR OWN'}
                   </div>
                 </button>
@@ -173,10 +173,11 @@ function ChiefBubble({ slot, task, now }: { slot: number; task: Task; now: strin
 
   const pos = standBeside(slot);
   const p = cellAt(pos.cx, pos.cy);
+  const left = Math.min(Math.max(p.x, 110), STAGE_W - 110); // keep the bubble on stage
   return (
     <div
       className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full"
-      style={{ left: p.x, top: p.y - 96 }}
+      style={{ left, top: p.y - 96 }}
     >
       <div className="relative max-w-[190px] rounded-xl border-2 border-[#5d4326] bg-white px-2.5 py-1.5 text-xs font-medium text-stone-700 shadow">
         {line}
