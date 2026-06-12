@@ -60,9 +60,23 @@ export const standBeside = (slot: number) => {
   return { cx: d.cx < 2 ? d.cx + 1.45 : d.cx - 1.45, cy: d.cy + 0.3 };
 };
 
-// The clear horizontal lane the Chief walks along in the open plan, between
-// the desk chairs and the rooms' wall band.
-export const WALK_LANE = 4.6;
+// The clear horizontal lane (corridor) that runs across the open plan, just
+// south of the desk fronts — everyone walks along it to get anywhere.
+export const CORRIDOR = 4.5;
+export const WALK_LANE = CORRIDOR; // alias kept for the Chief's routing
+
+// Spots an agent stands at to do a break activity (face the fixture to its
+// north). The water cooler lives in the open plan; the vending machines and
+// espresso bar are in the lounge.
+export const COOLER_STAND = { cx: 10.3, cy: 3.7 };
+export const VENDING_STAND = { cx: 1.6, cy: 8.2 };
+export const COFFEE_STAND = { cx: 4.0, cy: 8.2 };
+// Where a visitor stands to chat at a worker's cubicle (in the corridor,
+// facing the desk).
+export const chatSpot = (slot: number) => {
+  const d = DESK_CELLS[slot] ?? DESK_CELLS[0];
+  return { cx: d.cx, cy: CORRIDOR };
+};
 
 // Waypoints just inside / outside each room's door, for routing the Chief.
 export const OFFICE_DOOR_IN = { cx: 6.85, cy: 7.5 };
@@ -79,11 +93,12 @@ export const PROPS = {
   poster: { cx: 5.5, cy: -0.5 },
   chart: { cx: 7.3, cy: -0.1 },
   plantBack: { cx: 8.6, cy: 0.3 },
-  waterCooler: { cx: 10.0, cy: 0.25 },
-  copier: { cx: 11.05, cy: 0.3 },
-  // open plan, right side
-  printerTable: { cx: 11.2, cy: 3.6 },
-  plantMid: { cx: 11.5, cy: 5.0 },
+  copier: { cx: 9.7, cy: 0.25 },
+  copier2: { cx: 11.05, cy: 0.3 },
+  // open plan, right side — the water cooler is reachable here, on the floor
+  waterCooler: { cx: 10.3, cy: 2.7 },
+  printerTable: { cx: 11.4, cy: 4.0 },
+  plantMid: { cx: 11.5, cy: 5.4 },
   // the lounge (bottom-left room); floor-standing items clear the wall face,
   // which reaches down to ROOM_FACE_BOTTOM
   vendingRed: { cx: 1.0, cy: 7.3 },
