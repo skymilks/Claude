@@ -9,7 +9,8 @@ import { requireAuth, requireAdmin, isAdminUserId, hashPassword, startSession } 
 import { PLANS, planOf, ensurePeriod, overCap } from './plans.js';
 import { draftTeam, draftCustomAgent, sanitizeAgentConfigs, validateRoutine } from './prospects.js';
 import { fetchSiteText } from './fetchsite.js';
-import { insertAgent, hireFromTemplate, freeWorkerSlot, WORKER_SLOTS } from './hire.js';
+import { insertAgent, hireFromTemplate, freeWorkerSlot, WORKER_SLOTS, provisionVp } from './hire.js';
+import { pickRoster, modelCard } from './models.js';
 
 export const routes = Router();
 
@@ -23,7 +24,11 @@ const agentToJson = (a) => ({
   routine: a.routine ? JSON.parse(a.routine) : null,
   systemPrompt: undefined,
 });
-const taskToJson = (t) => ({ ...t, input: t.input ? JSON.parse(t.input) : null });
+const taskToJson = (t) => ({
+  ...t,
+  input: t.input ? JSON.parse(t.input) : null,
+  drafts: t.drafts ? JSON.parse(t.drafts) : null, // council: { drafts[], winner, refinedBrief }
+});
 
 // Validate a task's input values against the agent's form schema. Shared by
 // the account task route and the prospect-demo try route.
@@ -55,6 +60,7 @@ routes.use('/api', requireAuth);
 routes.get('/api/state', (req, res) => {
   const user = ensurePeriod(req.userId);
   if (!user) return res.status(401).json({ error: 'Account no longer exists' });
+  provisionVp(req.userId); // every workspace has its VP, the single entry point
   const agents = db.prepare(`SELECT * FROM agents WHERE ownerId = ? ORDER BY hiredAt`).all(req.userId);
   const tasks = db.prepare(`SELECT * FROM tasks WHERE ownerId = ? ORDER BY createdAt DESC LIMIT 60`).all(req.userId);
   const unlocks = db.prepare(`SELECT * FROM unlocks WHERE ownerId = ?`).all(req.userId);
@@ -75,8 +81,14 @@ routes.get('/api/state', (req, res) => {
       company: user.prospectCompany ?? null,
       brief: user.prospectBrief ?? null,
       welcomeLine: user.welcomeLine ?? null,
+      // The VP needs to know the business to frame your asks. Capture it once.
+      business: user.prospectBrief ?? null,
+      needsBusiness: !user.prospectBrief,
       needsIntake: agents.length === 0,
     },
+    // The four contestant seats for this workspace right now (adapts to which
+    // provider keys are set; 4 Claude seats by default).
+    roster: pickRoster().map(modelCard),
     plans: { free: PLANS.free, pro: PLANS.pro },
     agents: agents.map(agentToJson),
     tasks: tasks.map(taskToJson),
@@ -225,6 +237,42 @@ function capGate(req, res) {
   }
   return true;
 }
+
+// ---------------------------------------------------------------------------
+// The council: the CEO asks the VP one question; a panel of four AI models each
+// answers, their reports are scored, and a synthesis merges the best into one
+// brief. This is the product's core loop.
+
+// The four contestant seats (also in /api/state; standalone for the roster UI).
+routes.get('/api/roster', (req, res) => {
+  res.json({ roster: pickRoster().map(modelCard) });
+});
+
+// Capture the one thing the VP needs to frame asks well: what the business is.
+routes.post('/api/workspace/context', (req, res) => {
+  const business = (req.body?.business ?? '').toString().trim().slice(0, 4000);
+  if (!business) return res.status(400).json({ error: 'Tell the VP a little about your business.' });
+  db.prepare(`UPDATE users SET prospectBrief = ? WHERE id = ?`).run(business, req.userId);
+  res.json({ ok: true });
+});
+
+// Ask the VP — queues one council run against the workspace's VP.
+routes.post('/api/council', (req, res) => {
+  const brief = (req.body?.brief ?? '').toString().trim().slice(0, 40_000);
+  if (!brief) return res.status(400).json({ error: 'Tell the VP what you need.' });
+  const vp = provisionVp(req.userId);
+  if (db.prepare(`SELECT 1 FROM tasks WHERE agentId = ? AND status IN ('queued','running')`).get(vp.id)) {
+    return res.status(409).json({ error: 'Your VP is already convening the panel.' });
+  }
+  if (!capGate(req, res)) return;
+
+  const id = uid();
+  db.prepare(
+    `INSERT INTO tasks (id, ownerId, agentId, kind, title, input, status, estimatedSeconds, createdAt)
+     VALUES (?, ?, ?, 'council', ?, ?, 'queued', ?, ?)`
+  ).run(id, req.userId, vp.id, brief.slice(0, 80), JSON.stringify({ brief }), estimateSeconds('council', brief.length), now());
+  res.json(taskToJson(getTask(id, req.userId)));
+});
 
 routes.post('/api/tasks', (req, res) => {
   const { agentId, input } = req.body ?? {};

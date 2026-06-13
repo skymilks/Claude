@@ -6,6 +6,7 @@
 import { db, now, uid } from './db.js';
 import { runModel, friendlyApiError, demoMode } from './claude.js';
 import { CEO_SYSTEM, recentWorkBlock, ceoUserContent, boardroomUserContent } from './synthesis.js';
+import { runCouncil } from './council.js';
 import { addXp, evaluateUnlocks, hasUnlock, XP } from './progression.js';
 import { ensurePeriod, overCap } from './plans.js';
 import { sweepExpiredSessions } from './auth.js';
@@ -77,6 +78,27 @@ async function runTask(task) {
   try {
     if (!agent) throw new Error('Agent no longer exists.');
 
+    // The council bake-off: orchestrate the whole panel + synthesis here, then
+    // store the merged brief plus the four scored drafts. One task row, ~6
+    // model calls; tokens summed and deducted once.
+    if (task.kind === 'council') {
+      const input = task.input ? JSON.parse(task.input) : {};
+      const owner = db.prepare(`SELECT prospectBrief FROM users WHERE id = ?`).get(task.ownerId);
+      const { finalText, dissent, drafts, winner, refinedBrief, tokensUsed } = await runCouncil({
+        brief: input.brief,
+        businessContext: owner?.prospectBrief || '',
+      });
+      const output = dissent ? `${finalText}\n\n## Dissent\n${dissent}` : finalText;
+      db.prepare(`UPDATE tasks SET status = 'done', output = ?, drafts = ?, tokensUsed = ?, modelUsed = 'council', finishedAt = ? WHERE id = ?`).run(
+        output, JSON.stringify({ drafts, winner, refinedBrief }), tokensUsed, now(), task.id
+      );
+      ensurePeriod(task.ownerId);
+      db.prepare(`UPDATE users SET usageThisPeriod = usageThisPeriod + ? WHERE id = ?`).run(tokensUsed, task.ownerId);
+      addXp(agent.id, XP.councilDone);
+      evaluateUnlocks(task.ownerId);
+      return;
+    }
+
     let system, userContent;
     if (task.kind === 'boardroom' || agent.role === 'ceo') {
       const work = recentWorkBlock(task.ownerId);
@@ -117,7 +139,10 @@ function formatWorkerInput(agent, input) {
 }
 
 export function estimateSeconds(modelTier, inputChars = 0) {
-  if (demoMode) return 9;
+  if (demoMode) return modelTier === 'council' ? 14 : 9;
+  // Council runs four advisories in parallel + one synthesis, so wall-time is
+  // roughly the slowest model plus synthesis — not the sum of six calls.
+  if (modelTier === 'council') return Math.min(180, 75 + Math.round(inputChars / 400));
   if (modelTier === 'premium') return Math.min(240, 60 + Math.round(inputChars / 400));
   return Math.min(45, 10 + Math.round(inputChars / 400));
 }

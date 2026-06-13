@@ -55,6 +55,34 @@ Deliver a strategic read for the CEO:
 4. **Watch list** — things to keep an eye on but not act on yet.`;
 }
 
+// ---------------------------------------------------------------------------
+// The council bake-off: four AI models each wrote a full advisory on the same
+// brief; the VP merges the best of all four into one decisive brief, names the
+// strongest dissent, and scores each advisor. One call does merge + scoring.
+
+export const COUNCIL_SYNTH_SYSTEM = `You are the VP / Chief of Staff to the CEO of a small company. Four AI advisors — each a different model — independently answered the same brief. Do three things, in order:
+
+1. Merge the strongest, most correct, and most useful parts of the four into ONE decisive executive brief for the CEO. Adjudicate — do not average into mush. Where advisors conflict, take a position and say why. Don't name the advisors in the body; the CEO wants the answer, not the committee.
+2. A section "## Dissent" — the single strongest counterpoint the CEO should not ignore (2–4 sentences).
+3. A fenced \`\`\`json block scoring each advisor 0–100 on how good and useful THEIR report was, each with a one-line rationale, and naming the winner by brand. Exact shape:
+{"scores":[{"brand":"<advisor brand exactly as given>","score":<0-100 integer>,"note":"<one line>"}],"winner":"<brand>"}
+
+Keep the brief tight enough to read in a few minutes. Clean Markdown.`;
+
+export function councilSynthUserContent(brief, okDrafts) {
+  const blocks = okDrafts
+    .map((d) => `### Advisor: ${d.brand} (${d.title})\n\n${d.text}`)
+    .join('\n\n---\n\n');
+  return `The CEO's brief:
+${brief}
+
+The ${okDrafts.length} advisory reports:
+
+${blocks}
+
+Now deliver the merged executive brief, then the "## Dissent" section, then the \`\`\`json scores block (one entry per advisor brand above).`;
+}
+
 // The weekly Boardroom ritual: same capability, presentation framing.
 export function boardroomUserContent(workBlock) {
   return `${workBlock}

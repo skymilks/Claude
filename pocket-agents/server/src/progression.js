@@ -2,7 +2,7 @@
 // acting on outputs, running the Boardroom — never raw API volume.
 import { db, uid, now } from './db.js';
 
-export const XP = { taskDone: 10, boardroomDone: 25, actedOn: 15 };
+export const XP = { taskDone: 10, boardroomDone: 25, councilDone: 25, actedOn: 15 };
 
 // xp needed to *reach* each level (level = index + 1)
 const LEVELS = [0, 50, 140, 280, 480, 750, 1100, 1550, 2100, 2800];

@@ -28,6 +28,20 @@ export function insertAgent(ownerId, config, deskSlot) {
   return id;
 }
 
+// Every workspace has exactly one VP — the single entry point the CEO talks
+// to. It owns the council tasks (so they have an agentId, XP, history) but runs
+// no system prompt of its own; the council orchestrator drives the models.
+export function provisionVp(ownerId) {
+  const existing = db.prepare(`SELECT * FROM agents WHERE ownerId = ? AND role = 'vp'`).get(ownerId);
+  if (existing) return existing;
+  const id = uid();
+  db.prepare(
+    `INSERT INTO agents (id, ownerId, templateId, displayName, role, avatar, tagline, systemPrompt, inputSchema, outputFormat, modelTier, deskSlot, hiredAt)
+     VALUES (?, ?, 'vp', 'Your VP', 'vp', 'ceo', 'Puts your question to the model panel', ?, '[]', 'markdown', 'premium', 3, ?)`
+  ).run(id, ownerId, 'You are the VP / Chief of Staff to the CEO.', now());
+  return db.prepare(`SELECT * FROM agents WHERE id = ?`).get(id);
+}
+
 export function hireFromTemplate(ownerId, template, displayName, deskSlot) {
   return insertAgent(
     ownerId,

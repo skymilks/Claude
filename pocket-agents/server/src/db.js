@@ -115,6 +115,9 @@ ensureColumn('agents', 'suggestions', 'suggestions TEXT');
 // A standing weekly job the agent runs on its own: JSON
 // { label, freq: 'weekly', input, nextRunAt }.
 ensureColumn('agents', 'routine', 'routine TEXT');
+// Council runs store their four scored advisory drafts here: JSON
+// { drafts: [{ modelKey, brand, title, model, text, score, scoreNote, ok }], winner, refinedBrief }.
+ensureColumn('tasks', 'drafts', 'drafts TEXT');
 
 export const uid = () => randomUUID();
 export const now = () => new Date().toISOString();
