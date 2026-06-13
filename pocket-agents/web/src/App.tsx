@@ -1,19 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useStore } from './store';
 import { api } from './api';
-import { Office } from './components/Office';
-import { ListView } from './components/ListView';
-import { AgentBuilder } from './components/AgentBuilder';
-import { AgentModal } from './components/AgentModal';
+import { CouncilView } from './components/CouncilView';
 import { ResultPanel } from './components/ResultPanel';
-import { Boardroom } from './components/Boardroom';
 import { Tray } from './components/Tray';
 import { Unlocks } from './components/Unlocks';
 import { AuthScreen } from './components/AuthScreen';
 import { UpgradeModal } from './components/UpgradeModal';
 import { PrivacyModal } from './components/PrivacyModal';
-import { OnboardingCard } from './components/OnboardingCard';
-import { IntakeWizard } from './components/IntakeWizard';
 import { ProspectsPanel } from './components/ProspectsPanel';
 import { unseenDone } from './selectors';
 
@@ -83,9 +77,6 @@ export default function App() {
 
   const anyDropdownOpen = store.trayOpen || store.menuOpen;
 
-  // First run: the Chief of Staff's intake takes over until a team is seated.
-  if (state.workspace.needsIntake) return <IntakeWizard />;
-
   return (
     <div className="min-h-screen bg-[#f3e7d3] pb-16">
       <header className="sticky top-0 z-30 border-b-4 border-[#d8c4a0] bg-[#faf3e6]/95 backdrop-blur">
@@ -130,15 +121,6 @@ export default function App() {
                 🏗️ Clients
               </HeaderButton>
             )}
-            <HeaderButton onClick={() => store.set({ builderOpen: true })} title="Describe a job — we draft the agent, you approve them">
-              🪑 New hire
-            </HeaderButton>
-            <HeaderButton onClick={() => store.set({ boardroomOpen: true })}>
-              🏛️ Boardroom
-              {state.boardroom.unlocked && state.boardroom.canConvene && (
-                <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-amber-500" />
-              )}
-            </HeaderButton>
             <HeaderButton onClick={() => setUnlocksOpen(true)}>🏆</HeaderButton>
             <HeaderButton onClick={() => store.set({ trayOpen: !store.trayOpen, menuOpen: false })}>
               📬
@@ -147,12 +129,6 @@ export default function App() {
                   {unseen}
                 </span>
               )}
-            </HeaderButton>
-            <HeaderButton
-              onClick={() => store.set({ cosmeticsOff: !store.cosmeticsOff })}
-              title="Toggle the game layer — all work is fully usable without it"
-            >
-              {store.cosmeticsOff ? '🏢' : '📋'}
             </HeaderButton>
             <HeaderButton onClick={() => store.set({ menuOpen: !store.menuOpen, trayOpen: false })}>⚙️</HeaderButton>
             {store.trayOpen && <Tray />}
@@ -198,14 +174,10 @@ export default function App() {
       )}
 
       <main className="mx-auto max-w-5xl px-4 pt-6">
-        <OnboardingCard />
-        {store.cosmeticsOff ? <ListView /> : <Office />}
+        <CouncilView />
       </main>
 
-      {store.builderOpen && <AgentBuilder />}
-      {store.agentModalId && <AgentModal />}
       {store.resultTaskId && <ResultPanel />}
-      {store.boardroomOpen && <Boardroom />}
       {store.upgradeOpen && <UpgradeModal />}
       {store.privacyOpen && <PrivacyModal />}
       {unlocksOpen && <Unlocks onClose={() => setUnlocksOpen(false)} />}

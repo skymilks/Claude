@@ -34,13 +34,43 @@ export type Agent = {
 
 export type TaskStatus = 'queued' | 'running' | 'done' | 'failed';
 
+// A contestant model on the council panel.
+export type ModelStats = { reasoning: number; knowledge: number; speed: number; creativity: number; rigor: number };
+export type RosterSeat = {
+  modelKey: string;
+  brand: string;
+  title: string;
+  color: string;
+  stats: ModelStats;
+  provider: string;
+  live: boolean; // a real vendor key is set (vs. a Claude stand-in)
+};
+
+// One advisor's report within a council run, with its 0–100 score.
+export type CouncilDraft = {
+  modelKey: string;
+  brand: string;
+  title: string;
+  color: string;
+  stats: ModelStats;
+  model: string;
+  text: string;
+  tokensUsed: number;
+  score: number | null;
+  scoreNote: string | null;
+  ok: boolean;
+  error?: string;
+};
+export type CouncilResult = { drafts: CouncilDraft[]; winner: string; refinedBrief: string };
+
 export type Task = {
   id: string;
   agentId: string;
-  kind: 'task' | 'boardroom';
+  kind: 'task' | 'boardroom' | 'council';
   title: string;
-  input: Record<string, string> | null;
+  input: Record<string, string> | null; // council runs store { brief }
   output: string | null;
+  drafts: CouncilResult | null; // council runs only
   status: TaskStatus;
   error: string | null;
   estimatedSeconds: number;
@@ -99,8 +129,11 @@ export type ServerState = {
     company: string | null;
     brief: string | null;
     welcomeLine: string | null;
+    business: string | null; // what the VP knows about the business
+    needsBusiness: boolean; // capture it before the first ask
     needsIntake: boolean;
   };
+  roster: RosterSeat[]; // the four contestant seats right now
   plans: { free: Plan; pro: Plan };
   agents: Agent[];
   tasks: Task[];

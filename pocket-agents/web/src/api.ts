@@ -37,6 +37,10 @@ export const api = {
     request<Agent>('/api/agents/custom', { method: 'POST', body: JSON.stringify({ agent }) }),
   createTask: (agentId: string, input: Record<string, string>) =>
     request<Task>('/api/tasks', { method: 'POST', body: JSON.stringify({ agentId, input }) }),
+  // The council: ask the VP one question; a panel of four models answers.
+  startCouncil: (brief: string) => request<Task>('/api/council', { method: 'POST', body: JSON.stringify({ brief }) }),
+  setBusiness: (business: string) =>
+    request<{ ok: true }>('/api/workspace/context', { method: 'POST', body: JSON.stringify({ business }) }),
   act: (taskId: string, action: 'copy' | 'save' | 'rerun' | 'rate', rating?: number) =>
     request<{ task: Task; rerunTask: Task | null }>(`/api/tasks/${taskId}/act`, {
       method: 'POST',
