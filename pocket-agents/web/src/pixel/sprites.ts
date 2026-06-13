@@ -112,6 +112,51 @@ export function character(role: string, frame: 0 | 1 = 0): SpriteDef {
   return { grid: applyLook(rows, r), palette: facePalette(r) };
 }
 
+// The back of a seated agent — the head is all hair, the torso is the sweater
+// back. Used for the desks where the worker faces their screen (away from us),
+// so the monitor's front is what the camera sees.
+const HEAD_BACK = [
+  '.....OOOOOO.....',
+  '...OOHHHHHHOO...',
+  '..OHHhhhhHHHHO..',
+  '..OHHHHHHHHHHO..',
+  '..OHHHHHHHHHHO..',
+  '..OHHHHHHHHHHO..',
+  '..OHHHHHHHHHHO..',
+  '..OHHHHHHHHHHO..',
+  '..OHHHHHHHHHHO..',
+  '..OHHHHHHHHHHO..',
+  '...OHHHHHHHHO...',
+  '....OOSSSSOO....',
+];
+const TORSO_BACK_IDLE = [
+  '...OOBBBBBBOO...',
+  '..OBbBBBBBBbBO..',
+  '.OBbBBBBBBBBbBO.',
+  '.OBbBBBBBBBBbBO.',
+  '.OBbBBBBBBBBbBO.',
+  '.OSdBBBBBBBBdSO.',
+  '.OSSBBBBBBBBSSO.',
+  '..OOOBBBBBBOOO..',
+];
+const TORSO_BACK_TYPE = [
+  '...OOBBBBBBOO...',
+  '.OSdBBBBBBBBdSO.',
+  '.OSSBBBBBBBBSSO.',
+  '.OBbBBBBBBBBbBO.',
+  '.OBbBBBBBBBBbBO.',
+  '.OBbBBBBBBBBbBO.',
+  '..OBBBBBBBBBBO..',
+  '..OOOBBBBBBOOO..',
+];
+export function characterBack(role: string, frame: 0 | 1 = 0): SpriteDef {
+  const r = ROLE_LOOKS[role] ?? ROLE_LOOKS.sales;
+  const rows = [...HEAD_BACK, COLLAR, ...(frame ? TORSO_BACK_TYPE : TORSO_BACK_IDLE)];
+  // only the suit collar reads from behind; skip face-side accessories
+  const grid = rows.map((row, y) => (r.suit && y === 12 ? '.....OWWWO.....' : row));
+  return { grid, palette: facePalette(r) };
+}
+
 // --- desk: deep wood desk built programmatically (46x40) with an iMac, a
 // keyboard/mouse, a mug, a notepad+pen, and a side drawer unit. The screen
 // lights up cyan while the agent is working; the seated character sits behind.

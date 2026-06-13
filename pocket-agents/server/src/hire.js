@@ -4,9 +4,10 @@
 import { db, uid, now } from './db.js';
 import { CEO_SYSTEM } from './synthesis.js';
 
-// Desk slots: 0-2 the worker row, 3 the CEO's spot by the window, 4 the
-// open desk under the window for custom hires.
-export const WORKER_SLOTS = [0, 1, 2, 4];
+// Desk slots: a six-seat open-plan bullpen (0-2 back row, 4-6 front row) plus
+// slot 3, the Chief of Staff's private office. Workers fill the bullpen; 3 is
+// hired separately.
+export const WORKER_SLOTS = [0, 1, 2, 4, 5, 6];
 
 export function freeWorkerSlot(ownerId) {
   const taken = new Set(db.prepare(`SELECT deskSlot FROM agents WHERE ownerId = ?`).all(ownerId).map((r) => r.deskSlot));

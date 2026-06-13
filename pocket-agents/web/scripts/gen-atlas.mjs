@@ -18,9 +18,15 @@ if (!PACK) {
 
 // name → singles number (trimmed automatically)
 const SINGLES = {
-  ws1: 233,        // desk with tower PC + monitor + clutter
+  ws1: 233,        // desk with tower PC + monitor + clutter (faces away → screen front)
   ws2: 235,        // desk set, second colorway
   ws3: 327,        // desk with white monitor + papers
+  deskTop: 16,     // a plain desk-surface tile (tiled into a 2-wide desk)
+  deskEdge: 14,    // the desk's front lip + legs
+  monitorBack: 126,// monitor seen from behind (agents facing the camera)
+  monitorFront: 136,// monitor screen + keyboard (agents facing away)
+  keyboard: 124,
+  dualMon: 311,    // dual screens on a stand (the Chief's)
   deskL: 249,      // L-shaped tan desk (the Chief's)
   clutter: 227,    // dual-monitor desktop set, overlays a bare desk
   chairBack: 101,  // black chair seen from behind (tucks under a south-facing desk)
@@ -32,6 +38,8 @@ const SINGLES = {
   whiteboard: 170, // blank presentation screen
   chart: 172,      // line-chart board
   poster: 164,     // pop-art four faces
+  frame163: 163,   // framed abstract art (the Chief's wall)
+  panel128: 128,   // light wall panel / schedule board
   certificate: 115,
   smallFrame: 162,
   plantA: 98,
@@ -53,6 +61,7 @@ const SINGLES = {
 const SLICES = {
   floor: [352, 160, 32, 32],      // light grey office tile
   floorWood: [416, 160, 32, 32],  // light plank (the Chief's office)
+  brick: [704, 288, 32, 32],      // tan brick floor (the bottom rooms in the sample)
   wallWhite: [32, 352, 32, 64],   // white wall: cap + face
   wallVert: [96, 352, 16, 64],    // narrow vertical wall strip
 };

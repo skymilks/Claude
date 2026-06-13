@@ -1,7 +1,7 @@
 // Generated atlas of LimeZu "Modern Office" sprites (only what we render).
 // Art © LimeZu — commercial use OK, redistribution of the full pack is not,
 // so we ship just these slices. Regenerate with web/scripts/gen-atlas.mjs.
-export const ATLAS = { w: 512, h: 180 };
+export const ATLAS = { w: 512, h: 201 };
 export const FRAMES: Record<string, [number, number, number, number]> = {
   "partitionPost": [
     1,
@@ -9,68 +9,74 @@ export const FRAMES: Record<string, [number, number, number, number]> = {
     6,
     86
   ],
-  "vendingRed": [
+  "dualMon": [
     8,
+    1,
+    32,
+    70
+  ],
+  "vendingRed": [
+    41,
     1,
     46,
     68
   ],
   "vendingDark": [
-    55,
+    88,
     1,
     46,
     68
   ],
   "deskL": [
-    102,
+    135,
     1,
     64,
     64
   ],
   "coffeeBar": [
-    167,
+    200,
     1,
     52,
     64
   ],
   "wallWhite": [
-    220,
+    253,
     1,
     32,
     64
   ],
   "wallVert": [
-    253,
+    286,
     1,
     16,
     64
   ],
   "waterCooler": [
-    270,
+    303,
     1,
     28,
     60
   ],
   "plantA": [
-    299,
+    332,
     1,
     32,
     56
   ],
   "ws3": [
-    332,
+    365,
     1,
     52,
     54
   ],
   "plantB": [
-    385,
+    418,
     1,
     24,
     52
   ],
   "copier": [
-    410,
+    443,
     1,
     52,
     48
@@ -159,46 +165,94 @@ export const FRAMES: Record<string, [number, number, number, number]> = {
     32,
     36
   ],
-  "lamp": [
+  "monitorBack": [
     181,
+    137,
+    32,
+    34
+  ],
+  "lamp": [
+    214,
     137,
     30,
     34
   ],
   "shelf": [
-    212,
+    245,
     137,
     32,
     34
   ],
+  "deskTop": [
+    278,
+    137,
+    32,
+    32
+  ],
+  "monitorFront": [
+    311,
+    137,
+    26,
+    32
+  ],
   "certificate": [
-    245,
+    338,
     137,
     28,
     32
   ],
   "rug": [
-    274,
+    367,
     137,
     32,
     32
   ],
   "floor": [
-    307,
+    400,
     137,
     32,
     32
   ],
   "floorWood": [
-    340,
+    433,
     137,
     32,
     32
   ],
-  "smallFrame": [
-    373,
+  "brick": [
+    466,
     137,
+    32,
+    32
+  ],
+  "frame163": [
+    1,
+    180,
+    24,
+    20
+  ],
+  "smallFrame": [
+    26,
+    180,
     26,
     20
+  ],
+  "deskEdge": [
+    53,
+    180,
+    32,
+    14
+  ],
+  "keyboard": [
+    86,
+    180,
+    32,
+    10
+  ],
+  "panel128": [
+    119,
+    180,
+    32,
+    10
   ]
 };

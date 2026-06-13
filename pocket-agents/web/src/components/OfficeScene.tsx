@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { Application, Container, Graphics, Sprite as PixiSprite, TilingSprite } from 'pixi.js';
-import { character, standing, DOG } from '../pixel/sprites';
+import { character, characterBack, standing, DOG } from '../pixel/sprites';
 import { loadAtlas, frame, spriteTexture, glowTexture } from '../pixel/pack/tex';
 import {
   STAGE_W, STAGE_H, FLOOR_W, WALL_PX, TILE, S, COLS, ROWS,
-  ROOM_TOP, DIVIDER_X, DOOR_LOUNGE, DOOR_OFFICE, CORRIDOR,
+  ROOM_TOP, DIVIDER_X, DOOR_LOUNGE, DOOR_OFFICE, CORRIDOR, BULLPEN_COLS,
   cellAt, depth, DESK_CELLS, CEO_SLOT, standBeside, chatSpot, PROPS, COFFEE_STOP,
   COOLER_STAND, VENDING_STAND, COFFEE_STAND,
   OFFICE_DOOR_IN, OFFICE_DOOR_OUT, LOUNGE_DOOR_IN, LOUNGE_DOOR_OUT,
+  type Desk,
 } from '../pixel/grid';
 
 // The canvas half of the office: PixiJS renders the top-down room (LimeZu
@@ -41,9 +42,16 @@ type DeskGroup = {
   glow: PixiSprite;
   avatar: string;
   working: boolean;
-  base: Pt;
+  base: Desk;
+  charY: number; // seated bust's resting screen-y
   wander: Wander | null; // null for the Chief (he hosts instead)
 };
+
+// The seated bust faces the camera (south) or shows its back (north).
+const seatedTex = (avatar: string, face: 'south' | 'north', f: 0 | 1) =>
+  face === 'south'
+    ? spriteTexture(`char-${avatar}-${f}`, () => character(avatar, f))
+    : spriteTexture(`charb-${avatar}-${f}`, () => characterBack(avatar, f));
 
 type Walker = {
   sprite: PixiSprite;
@@ -70,7 +78,6 @@ type Scene = {
 
 const WALK_TILES_PER_S = 3.4;
 const WORKER_TILES_PER_S = 2.7;
-const DESK_VARIANTS = ['ws1', 'ws2', 'ws3'];
 const PX = TILE * S; // one tile in stage px
 
 export function OfficeScene({ agents, cosmetics, hostSlot }: { agents: SceneAgent[]; cosmetics: SceneCosmetics; hostSlot: number | null }) {
@@ -151,36 +158,30 @@ function buildRoom(layer: Container) {
   div.zIndex = depth(ROWS) + 50;
   layer.addChild(div);
 
-  // the worker cubicles: a shared back panel with vertical dividers between
-  // the three bays, so each worker sits in their own partitioned space
-  buildCubicles(layer);
+  // the bullpen: glass partitions framing the two back-to-back desk rows
+  buildBullpen(layer);
 
-  // back-wall décor and fixtures
-  prop(layer, 'shelf', PROPS.shelf);
+  // open-plan back wall + right-side fixtures
   prop(layer, 'whiteboard', PROPS.whiteboard);
-  prop(layer, 'certificate', PROPS.certificate);
   prop(layer, 'poster', PROPS.poster);
   prop(layer, 'chart', PROPS.chart);
-  prop(layer, 'plantA', PROPS.plantBack);
   prop(layer, 'copier', PROPS.copier);
-  prop(layer, 'copier', PROPS.copier2);
-  // open plan, right side
   prop(layer, 'waterCooler', PROPS.waterCooler);
-  prop(layer, 'papers', PROPS.printerTable);
   prop(layer, 'plantB', PROPS.plantMid);
   // the lounge
   prop(layer, 'vendingRed', PROPS.vendingRed);
   prop(layer, 'vendingDark', PROPS.vendingDark);
   prop(layer, 'sofa', PROPS.sofa);
-  prop(layer, 'moneyPlant', PROPS.moneyPlant);
+  prop(layer, 'plantA', PROPS.loungePlant);
   prop(layer, 'lobbyChair', PROPS.lobbyChair);
-  // the Chief's office
-  prop(layer, 'certificate', PROPS.offCert);
-  prop(layer, 'smallFrame', PROPS.offFrame);
-  prop(layer, 'chart', PROPS.offChart);
+  // the Chief's office (mirrors the sample): wall art, a monitor on a cabinet,
+  // and plants — the desk itself is built with the Chief's station
+  prop(layer, 'frame163', PROPS.offFrame);
+  prop(layer, 'panel128', PROPS.offPanel);
+  prop(layer, 'copier', PROPS.offCabinet);
+  prop(layer, 'monitorBack', PROPS.offShelfMon);
   prop(layer, 'plantA', PROPS.offPlant);
   prop(layer, 'plantB', PROPS.offPlant2);
-  prop(layer, 'chairOrange', PROPS.guestChair);
 
   // white outer trim around the whole map, like the sample's outer walls
   const trim = new Graphics();
@@ -207,40 +208,66 @@ function wallRun(layer: Container, fromX: number, toX: number, topY: number) {
   t.zIndex = depth(topY + 2);
 }
 
-// Cubicle walls for the worker row: one horizontal glass back-panel that the
-// desks butt up against, plus a vertical post on each bay edge.
-function buildCubicles(layer: Container) {
-  const slots = [0, 1, 2].map((s) => DESK_CELLS[s]).filter(Boolean);
-  if (!slots.length) return;
-  const leftX = slots[0].cx - 1.0;
-  const rightX = slots[slots.length - 1].cx + 1.0;
-  const backBottom = 2.55; // where the panel's base sits (desks meet it here)
-
-  // back panel
+// Glass partitions framing the six-seat bullpen: a back panel behind the back
+// row, a low panel along the back-to-back seam, and vertical posts dividing
+// the three columns.
+function buildBullpen(layer: Container) {
+  const leftX = BULLPEN_COLS[0] - 1.05;
+  const rightX = BULLPEN_COLS[BULLPEN_COLS.length - 1] + 1.05;
   const panelTex = frame('partitionPanel');
-  const panel = new TilingSprite({ texture: panelTex, width: ((rightX - leftX) * PX) / S, height: panelTex.height });
-  panel.anchor.set(0, 1);
-  panel.scale.set(S);
-  const bp = cellAt(leftX, backBottom);
-  panel.position.set(bp.x, bp.y);
-  panel.zIndex = depth(backBottom) - 30; // behind the desks
-  layer.addChild(panel);
 
-  // vertical dividers between and around the bays
+  const hPanel = (cyBottom: number, z: number) => {
+    const panel = new TilingSprite({ texture: panelTex, width: ((rightX - leftX) * PX) / S, height: panelTex.height });
+    panel.anchor.set(0, 1);
+    panel.scale.set(S);
+    const bp = cellAt(leftX, cyBottom);
+    panel.position.set(bp.x, bp.y);
+    panel.zIndex = z;
+    layer.addChild(panel);
+  };
+  hPanel(0.85, -9_400); // behind the back row
+
+  // vertical posts on each column edge, spanning both rows
   const edges = [leftX];
-  for (let i = 0; i < slots.length - 1; i++) edges.push((slots[i].cx + slots[i + 1].cx) / 2);
+  for (let i = 0; i < BULLPEN_COLS.length - 1; i++) edges.push((BULLPEN_COLS[i] + BULLPEN_COLS[i + 1]) / 2);
   edges.push(rightX);
   const postTex = frame('partitionPost');
-  const postBottom = 3.95;
   for (const x of edges) {
     const post = new PixiSprite(postTex);
     post.anchor.set(0.5, 1);
-    post.scale.set(S);
-    const pp = cellAt(x, postBottom);
+    post.scale.set(S, S * 1.7); // tall enough to span the two rows
+    const pp = cellAt(x, 4.5);
     post.position.set(pp.x, pp.y);
-    post.zIndex = depth(postBottom) + 4;
+    post.zIndex = depth(0.6); // behind the desks/people
     layer.addChild(post);
   }
+}
+
+// A 2-tile-wide desk; `nearCy` is the row of its near (camera-side) edge. The
+// surface tiles sit above a front lip with legs. Returns nothing — callers
+// place the monitor/keyboard/agent relative to known rows.
+function deskBlock(layer: Container, cx: number, nearCy: number, z: number): PixiSprite[] {
+  const top = frame('deskTop');
+  const edge = frame('deskEdge');
+  const lipH = edge.height * S;
+  const made: PixiSprite[] = [];
+  for (const dx of [-0.5, 0.5]) {
+    const surf = new PixiSprite(top);
+    surf.anchor.set(0.5, 1);
+    surf.scale.set(S);
+    const ps = cellAt(cx + dx, nearCy);
+    surf.position.set(ps.x, ps.y - lipH * 0.55);
+    surf.zIndex = z;
+    const e = new PixiSprite(edge);
+    e.anchor.set(0.5, 1);
+    e.scale.set(S);
+    const pe = cellAt(cx + dx, nearCy);
+    e.position.set(pe.x, pe.y);
+    e.zIndex = z + 0.5;
+    layer.addChild(surf, e);
+    made.push(surf, e);
+  }
+  return made;
 }
 
 function prop(layer: Container, name: string, at: Pt) {
@@ -278,7 +305,7 @@ function reconcile(s: Scene, agents: SceneAgent[], cosmetics: SceneCosmetics, ho
     }
     if (group.avatar !== agent.avatar) {
       group.avatar = agent.avatar;
-      group.char.texture = spriteTexture(`char-${agent.avatar}-0`, () => character(agent.avatar, 0));
+      group.char.texture = seatedTex(agent.avatar, group.base.face, 0);
     }
     group.working = agent.working;
   }
@@ -326,70 +353,110 @@ function syncCosmetic(s: Scene, key: string, on: boolean, make: () => PixiSprite
   }
 }
 
-// A desk station composed to read as a person SITTING IN their chair: the
-// chair's tall back rises behind them, the agent faces the camera, and the
-// desk + monitor sit in front, hiding their lower body (after the sample).
+// Place an atlas prop at a cell, bottom-anchored, depth by its own row.
+function placeAt(layer: Container, name: string, cx: number, cy: number, scale = S, zoff = 0): PixiSprite {
+  const sp = new PixiSprite(frame(name));
+  const p = cellAt(cx, cy);
+  sp.anchor.set(0.5, 1);
+  sp.scale.set(scale);
+  sp.position.set(p.x, p.y);
+  sp.zIndex = depth(cy) + zoff;
+  layer.addChild(sp);
+  return sp;
+}
+
+// A worker desk. The two rows are composed so the monitor is physically
+// correct: the back row faces the camera (we see faces + the monitor's BACK,
+// which sits between them and us), the front row faces their screens (we see
+// their backs + the monitor's FRONT).
 function createDesk(layer: Container, slot: number, agent: SceneAgent): DeskGroup {
-  const chief = slot === CEO_SLOT;
+  if (slot === CEO_SLOT) return createCeoStation(layer, agent);
   const cell = DESK_CELLS[slot];
-  const base = cellAt(cell.cx, cell.cy);
-  const z = depth(cell.cy);
+  const { cx, cy, face } = cell;
+  const base = cellAt(cx, cy);
+  const sprites: PixiSprite[] = [];
+  let charY: number;
+  let glowCy: number;
 
-  // chair (tall back), behind the agent
-  const chair = new PixiSprite(frame('chairBack'));
-  chair.anchor.set(0.5, 1);
-  chair.scale.set(S * 0.86);
-  chair.position.set(base.x, base.y + 16);
-  chair.zIndex = z + 1;
-
-  // the agent, seated, facing the camera
-  const char = new PixiSprite(spriteTexture(`char-${agent.avatar}-0`, () => character(agent.avatar, 0)));
-  char.anchor.set(0.5, 1);
-  char.scale.set(chief ? 4.9 : 4.6);
-  char.position.set(base.x, base.y + 10);
-  char.zIndex = z + 2;
-
-  // the desk + monitor in front of them
-  const desk = new PixiSprite(frame(chief ? 'deskL' : DESK_VARIANTS[slot % DESK_VARIANTS.length]));
-  desk.anchor.set(0.5, 0);
-  desk.scale.set(chief ? S * 1.05 : S);
-  desk.position.set(base.x, base.y - (chief ? 30 : 38));
-  desk.zIndex = z + 3;
-
-  const sprites: PixiSprite[] = [chair, desk];
-  if (chief) {
-    // the L-desk is bare — sit a dual-monitor desktop set on it
-    const clutter = new PixiSprite(frame('clutter'));
-    clutter.anchor.set(0.5, 1);
-    clutter.scale.set(S);
-    clutter.position.set(base.x, base.y + 0.55 * PX);
-    clutter.zIndex = z + 4;
-    sprites.push(clutter);
+  if (face === 'south') {
+    sprites.push(placeAt(layer, 'chairBack', cx, cy - 0.05, S * 0.86, -2));
+    sprites.push(...deskBlock(layer, cx, cy + 1.0, depth(cy + 0.9)));
+    sprites.push(placeAt(layer, 'keyboard', cx, cy + 0.62, S, 1));
+    sprites.push(placeAt(layer, 'monitorBack', cx, cy + 0.95, S, 2));
+    charY = base.y + 0.18 * PX;
+    glowCy = cy + 0.8;
+  } else {
+    // faces away: desk + screen are to the north, in front of them
+    sprites.push(...deskBlock(layer, cx, cy - 0.12, depth(cy - 0.5)));
+    sprites.push(placeAt(layer, 'monitorFront', cx, cy - 0.78, S, 0));
+    sprites.push(placeAt(layer, 'keyboard', cx, cy - 0.3, S, 0));
+    sprites.push(placeAt(layer, 'chairBack', cx, cy + 0.42, S * 0.86, 5));
+    charY = base.y + 0.12 * PX;
+    glowCy = cy - 0.78;
   }
 
+  const char = new PixiSprite(seatedTex(agent.avatar, face, 0));
+  char.anchor.set(0.5, 1);
+  char.scale.set(4.5);
+  char.position.set(base.x, charY);
+  char.zIndex = depth(cy) + (face === 'south' ? 0.5 : 1.5);
+  layer.addChild(char);
+
+  const glowP = cellAt(cx, glowCy);
   const glow = new PixiSprite(glowTexture('screenglow', 'rgba(150,220,255,0.55)', 96));
   glow.anchor.set(0.5);
-  glow.scale.set(1.0, 0.7);
-  glow.position.set(base.x, base.y - 6);
-  glow.zIndex = z + 5;
+  glow.scale.set(0.95, 0.65);
+  glow.position.set(glowP.x, glowP.y - 0.2 * PX);
+  glow.zIndex = depth(glowCy) + 3;
   glow.visible = agent.working;
+  layer.addChild(glow);
 
-  // a walking sprite for break-time wandering (workers only)
-  let wander: Wander | null = null;
-  if (!chief) {
-    const stand = new PixiSprite(spriteTexture(`stand-${agent.avatar}-0`, () => standing(agent.avatar, 0)));
-    stand.anchor.set(0.5, 1);
-    stand.scale.set(4.4);
-    stand.visible = false;
-    layer.addChild(stand);
-    wander = {
-      stand, state: 'seated', phase: 'going', cx: cell.cx, cy: cell.cy,
-      queue: [], dwellUntil: 0, nextLeave: performance.now() + 8_000 + Math.random() * 16_000, facing: 1,
-    };
-  }
+  const stand = new PixiSprite(spriteTexture(`stand-${agent.avatar}-0`, () => standing(agent.avatar, 0)));
+  stand.anchor.set(0.5, 1);
+  stand.scale.set(4.4);
+  stand.visible = false;
+  layer.addChild(stand);
+  const wander: Wander = {
+    stand, state: 'seated', phase: 'going', cx, cy,
+    queue: [], dwellUntil: 0, nextLeave: performance.now() + 8_000 + Math.random() * 16_000, facing: 1,
+  };
 
-  layer.addChild(char, glow, ...sprites);
-  return { sprites, char, glow, avatar: agent.avatar, working: agent.working, base: cell, wander };
+  return { sprites, char, glow, avatar: agent.avatar, working: agent.working, base: cell, charY, wander };
+}
+
+// The Chief's private office: an L-desk with dual screens, a desk lamp, and an
+// orange chair — he faces his screens, so we see his back and the screen
+// fronts (mirroring the sample).
+function createCeoStation(layer: Container, agent: SceneAgent): DeskGroup {
+  const cell = DESK_CELLS[CEO_SLOT];
+  const { cx, cy } = cell;
+  const base = cellAt(cx, cy);
+  const sprites: PixiSprite[] = [];
+
+  const desk = placeAt(layer, 'deskL', cx, cy + 0.95, S * 1.05, -3);
+  sprites.push(desk);
+  sprites.push(placeAt(layer, 'dualMon', cx - 0.15, cy - 0.7, S, 0));
+  sprites.push(placeAt(layer, 'lamp', cx + 0.85, cy - 0.35, S, 1));
+  sprites.push(placeAt(layer, 'keyboard', cx, cy - 0.15, S, 1));
+  sprites.push(placeAt(layer, 'chairOrange', cx, cy + 0.5, S, 5));
+
+  const char = new PixiSprite(seatedTex(agent.avatar, 'north', 0));
+  char.anchor.set(0.5, 1);
+  char.scale.set(4.7);
+  char.position.set(base.x, base.y + 0.12 * PX);
+  char.zIndex = depth(cy) + 1.5;
+  layer.addChild(char);
+
+  const glowP = cellAt(cx, cy - 0.7);
+  const glow = new PixiSprite(glowTexture('screenglow', 'rgba(150,220,255,0.55)', 96));
+  glow.anchor.set(0.5);
+  glow.scale.set(1.1, 0.7);
+  glow.position.set(glowP.x, glowP.y - 0.2 * PX);
+  glow.zIndex = depth(cy - 0.7) + 3;
+  glow.visible = agent.working;
+  layer.addChild(glow);
+
+  return { sprites, char, glow, avatar: agent.avatar, working: agent.working, base: cell, charY: base.y + 0.12 * PX, wander: null };
 }
 
 // --- routing (shared) -----------------------------------------------------------
@@ -446,10 +513,10 @@ function tick(s: Scene, t: number, dtMS: number) {
   for (const [slot, group] of s.desks) {
     const seated = !group.wander || group.wander.state === 'seated';
     if (seated) {
-      const f = group.working ? frameN : 0;
-      group.char.texture = spriteTexture(`char-${group.avatar}-${f}`, () => character(group.avatar, f as 0 | 1));
+      const f: 0 | 1 = group.working ? (frameN as 0 | 1) : 0;
+      group.char.texture = seatedTex(group.avatar, group.base.face, f);
       const bob = group.working ? 0 : Math.round(Math.sin(t / 900 + slot * 1.7) * 1.5);
-      group.char.position.y = cellAt(group.base.cx, group.base.cy).y + 10 + bob;
+      group.char.position.y = group.charY + bob;
     }
     group.glow.visible = group.working && seated;
     if (group.working && seated) group.glow.alpha = 0.7 + Math.sin(t / 240) * 0.25;
@@ -468,7 +535,7 @@ function tick(s: Scene, t: number, dtMS: number) {
 function chooseActivity(s: Scene, slot: number): Pt {
   const opts: Pt[] = [COOLER_STAND, VENDING_STAND];
   if (s.hasCoffee) opts.push(COFFEE_STAND);
-  const peers = [0, 1, 2, 4].filter((x) => x !== slot && s.desks.has(x));
+  const peers = [0, 1, 2, 4, 5, 6].filter((x) => x !== slot && s.desks.has(x));
   if (peers.length) opts.push(chatSpot(peers[Math.floor(Math.random() * peers.length)]));
   return opts[Math.floor(Math.random() * opts.length)];
 }
