@@ -1,47 +1,44 @@
-<section class="section" id="gallery">
+---
+const pairs = [
+  { before: "/images/demo2_before.jpg", after: "/images/demo2_after.jpg" },
+  { before: "/images/demo3_before.jpg", after: "/images/demo3_after.jpg" },
+];
+---
+
+<section class="section section--alt" id="gallery">
   <div class="container">
     <h2>More real transformations</h2>
     <div class="gallery">
-      <div class="gallery__pair">
-        <img
-          class="gallery__img"
-          src="/images/demo2_before.jpg"
-          alt="Bathroom before renovation"
-          width="240"
-          height="320"
-          loading="lazy"
-          decoding="async"
-        />
-        <img
-          class="gallery__img"
-          src="/images/demo2_after.jpg"
-          alt="Bathroom after renovation"
-          width="240"
-          height="320"
-          loading="lazy"
-          decoding="async"
-        />
-      </div>
-      <div class="gallery__pair">
-        <img
-          class="gallery__img"
-          src="/images/demo3_before.jpg"
-          alt="Bathroom before renovation"
-          width="240"
-          height="320"
-          loading="lazy"
-          decoding="async"
-        />
-        <img
-          class="gallery__img"
-          src="/images/demo3_after.jpg"
-          alt="Bathroom after renovation"
-          width="240"
-          height="320"
-          loading="lazy"
-          decoding="async"
-        />
-      </div>
+      {
+        pairs.map(({ before, after }) => (
+          <div class="gallery__pair">
+            <div class="gallery__half">
+              <img
+                class="gallery__img"
+                src={before}
+                alt="Bathroom before renovation"
+                width="720"
+                height="960"
+                loading="lazy"
+                decoding="async"
+              />
+              <span class="gallery__chip">Before</span>
+            </div>
+            <div class="gallery__half">
+              <img
+                class="gallery__img"
+                src={after}
+                alt="Bathroom after renovation"
+                width="720"
+                height="960"
+                loading="lazy"
+                decoding="async"
+              />
+              <span class="gallery__chip gallery__chip--after">After</span>
+            </div>
+          </div>
+        ))
+      }
     </div>
   </div>
 </section>

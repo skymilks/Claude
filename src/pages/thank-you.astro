@@ -8,13 +8,20 @@ import { SITE } from "../config";
 <BaseLayout title={`Thanks — ${SITE.brand}`} description="Thanks for reaching out — we'll text you shortly.">
   <Header />
   <main>
-    <section class="section">
-      <div class="container" style="text-align: center;">
-        <h1>You're all set</h1>
-        <p class="hero__sub">
-          Got it — check your texts. We'll ask for one photo of your bathroom
-          and your free design will be on its way. — {SITE.brand}
-        </p>
+    <section class="thanks">
+      <div class="container">
+        <div class="thanks__card">
+          <span class="thanks__check">
+            <svg class="icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M9.5 16.2 5.3 12l-1.4 1.4 5.6 5.6 12-12L20.1 5.6 9.5 16.2z" />
+            </svg>
+          </span>
+          <h1>You're all set</h1>
+          <p class="thanks__copy">
+            Got it — check your texts. We'll ask for one photo of your bathroom
+            and your free design will be on its way. — {SITE.brand}
+          </p>
+        </div>
       </div>
     </section>
   </main>

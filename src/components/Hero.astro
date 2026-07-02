@@ -1,21 +1,33 @@
 ---
 import BeforeAfterSlider from "./BeforeAfterSlider.astro";
+import { SITE } from "../config";
 ---
 
-<section class="hero section">
+<section class="hero">
   <div class="container">
+    <span class="eyebrow">
+      <svg class="icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" />
+      </svg>
+      {SITE.city}, Ontario
+    </span>
     <h1>See Your New Bathroom Before You Spend a Dollar</h1>
     <p class="hero__sub">
       Send us one photo of your bathroom. Get back a free design of it fully
       renovated — plus a real quote from a licensed Thunder Bay contractor.
     </p>
-    <a class="btn" href="#form">Get My Free Design</a>
+    <p class="hero__cta">
+      <a class="btn btn--light" href="#form">Get My Free Design</a>
+    </p>
 
-    <BeforeAfterSlider
-      beforeSrc="/images/demo1_before.jpg"
-      afterSrc="/images/demo1_after.jpg"
-      alt="Sample bathroom renovation"
-      eager
-    />
+    <div class="hero__slider-wrap">
+      <BeforeAfterSlider
+        beforeSrc="/images/demo1_before.jpg"
+        afterSrc="/images/demo1_after.jpg"
+        alt="Sample bathroom renovation"
+        eager
+      />
+      <span class="ba-slider__hint">Drag to compare</span>
+    </div>
   </div>
 </section>

@@ -15,8 +15,8 @@ const { beforeSrc, afterSrc, alt, eager = false } = Astro.props;
       class="ba-slider__img ba-slider__img--before"
       src={beforeSrc}
       alt={`${alt} — before`}
-      width="480"
-      height="360"
+      width="960"
+      height="720"
       loading={eager ? "eager" : "lazy"}
       decoding="async"
     />
@@ -24,14 +24,19 @@ const { beforeSrc, afterSrc, alt, eager = false } = Astro.props;
       class="ba-slider__img ba-slider__img--after"
       src={afterSrc}
       alt={`${alt} — after`}
-      width="480"
-      height="360"
+      width="960"
+      height="720"
       loading={eager ? "eager" : "lazy"}
       decoding="async"
     />
     <span class="ba-slider__label ba-slider__label--before">Before</span>
     <span class="ba-slider__label ba-slider__label--after">After</span>
-    <span class="ba-slider__handle"></span>
+    <span class="ba-slider__divider"></span>
+    <span class="ba-slider__handle" aria-hidden="true">
+      <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M8.6 7.4 4 12l4.6 4.6L10 15.2 6.8 12 10 8.8 8.6 7.4zm6.8 0L14 8.8l3.2 3.2-3.2 3.2 1.4 1.4L20 12l-4.6-4.6z" />
+      </svg>
+    </span>
     <input
       class="ba-slider__range"
       type="range"
