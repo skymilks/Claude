@@ -1,0 +1,51 @@
+---
+import "../styles/global.css";
+import { SITE } from "../config";
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const { title = SITE.title, description = SITE.description } = Astro.props;
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  name: SITE.brand,
+  telephone: SITE.phone,
+  areaServed: SITE.city,
+  address: {
+    "@type": "PostalAddress",
+    addressLocality: SITE.city,
+    addressRegion: SITE.region,
+    addressCountry: "CA",
+  },
+};
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content="/images/demo1_after.jpg" />
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+
+    <!-- META PIXEL HERE -->
+
+    <slot name="head" />
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

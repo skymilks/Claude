@@ -1,0 +1,55 @@
+---
+interface Props {
+  beforeSrc: string;
+  afterSrc: string;
+  alt: string;
+  eager?: boolean;
+}
+
+const { beforeSrc, afterSrc, alt, eager = false } = Astro.props;
+---
+
+<div class="ba-slider">
+  <figure class="ba-slider__figure">
+    <img
+      class="ba-slider__img ba-slider__img--before"
+      src={beforeSrc}
+      alt={`${alt} — before`}
+      width="480"
+      height="360"
+      loading={eager ? "eager" : "lazy"}
+      decoding="async"
+    />
+    <img
+      class="ba-slider__img ba-slider__img--after"
+      src={afterSrc}
+      alt={`${alt} — after`}
+      width="480"
+      height="360"
+      loading={eager ? "eager" : "lazy"}
+      decoding="async"
+    />
+    <span class="ba-slider__label ba-slider__label--before">Before</span>
+    <span class="ba-slider__label ba-slider__label--after">After</span>
+    <span class="ba-slider__handle"></span>
+    <input
+      class="ba-slider__range"
+      type="range"
+      min="0"
+      max="100"
+      value="50"
+      aria-label="Drag to compare before and after"
+    />
+  </figure>
+</div>
+
+<script is:inline>
+  // is:inline keeps this in the page HTML itself — no separate script request.
+  document.querySelectorAll(".ba-slider").forEach((slider) => {
+    const range = slider.querySelector(".ba-slider__range");
+    if (!(range instanceof HTMLInputElement)) return;
+    range.addEventListener("input", () => {
+      slider.setAttribute("style", `--ba-pos: ${range.value}%`);
+    });
+  });
+</script>

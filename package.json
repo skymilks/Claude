@@ -1,23 +1,17 @@
 {
-  "name": "canadian-contracts-browser",
+  "name": "bathroom-reno-landing",
+  "type": "module",
   "version": "1.0.0",
-  "description": "A user-friendly web application for browsing Canadian government contracts",
-  "main": "index.html",
-  "scripts": {
-    "start": "python -m http.server 8000",
-    "serve": "http-server -p 8000"
+  "private": true,
+  "engines": {
+    "node": ">=20"
   },
-  "keywords": [
-    "canada",
-    "government",
-    "contracts",
-    "procurement",
-    "browser",
-    "web-app"
-  ],
-  "author": "",
-  "license": "MIT",
-  "devDependencies": {
-    "http-server": "^14.1.1"
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "astro": "^5.0.0"
   }
 }

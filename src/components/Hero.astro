@@ -1,0 +1,21 @@
+---
+import BeforeAfterSlider from "./BeforeAfterSlider.astro";
+---
+
+<section class="hero section">
+  <div class="container">
+    <h1>See Your New Bathroom Before You Spend a Dollar</h1>
+    <p class="hero__sub">
+      Send us one photo of your bathroom. Get back a free design of it fully
+      renovated — plus a real quote from a licensed Thunder Bay contractor.
+    </p>
+    <a class="btn" href="#form">Get My Free Design</a>
+
+    <BeforeAfterSlider
+      beforeSrc="/images/demo1_before.jpg"
+      afterSrc="/images/demo1_after.jpg"
+      alt="Sample bathroom renovation"
+      eager
+    />
+  </div>
+</section>

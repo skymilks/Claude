@@ -1,0 +1,29 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import { SITE } from "../config";
+---
+
+<BaseLayout title={`Thanks — ${SITE.brand}`} description="Thanks for reaching out — we'll text you shortly.">
+  <Header />
+  <main>
+    <section class="section">
+      <div class="container" style="text-align: center;">
+        <h1>You're all set</h1>
+        <p class="hero__sub">
+          Got it — check your texts. We'll ask for one photo of your bathroom
+          and your free design will be on its way. — {SITE.brand}
+        </p>
+      </div>
+    </section>
+  </main>
+  <Footer />
+
+  <!-- META PIXEL CONVERSION - UNCOMMENT AFTER PIXEL BASE CODE ADDED -->
+  <!--
+  <script is:inline>
+    fbq('track', 'Lead');
+  </script>
+  -->
+</BaseLayout>

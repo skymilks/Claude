@@ -21,6 +21,8 @@ yarn-error.log*
 # Build outputs
 dist/
 build/
+.astro/
+.wrangler/
 *.log
 
 # OS files
