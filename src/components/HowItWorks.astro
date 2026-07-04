@@ -14,7 +14,7 @@ const steps = [
       {
         steps.map(([lead, rest], i) => (
           <li class="step">
-            <span class="step__num">{i + 1}</span>
+            <span class="step__num">{String(i + 1).padStart(2, "0")}</span>
             <p>
               <span class="step__lead">{lead}</span>
               <span class="step__rest"> — {rest}</span>
